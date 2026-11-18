@@ -3,8 +3,11 @@ import { PORT } from './config';
 
 import  os from "os";
 
+app.get('/', (req, res) => {
+  res.send('MindCare Backend Server is running!');
+});
 
-app.listen(PORT, "0.0.0.0", () => {
+/* app.listen(PORT, "0.0.0.0", () => {
   console.log("🚀 Backend Server Started!");
   console.log(`Local: http://localhost:${PORT}`);
 
@@ -18,4 +21,4 @@ app.listen(PORT, "0.0.0.0", () => {
       console.log(`Network: http://${item.address}:${PORT}`);
     }
   });
-});
+}); */
