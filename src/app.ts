@@ -5,7 +5,7 @@ import apiRoutes from './routes';
 
 const app = express();
 const corsOrigins = new Set(
-  (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
+  (process.env.CORS_ORIGINS || 'https://mindcare-frontend-ochre.vercel.app,http://localhost:5173,http://127.0.0.1:5173')
     .split(',')
     .map(origin => origin.trim())
     .filter(Boolean),
