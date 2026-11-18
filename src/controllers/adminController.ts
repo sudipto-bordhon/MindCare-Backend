@@ -4,7 +4,7 @@ import { AboutTeamConfigModel, AboutTeamMemberModel, BUILT_IN_SOUND_TYPES, Crisi
 import { parseCrisisHelplines } from '../../crisisHelplines';
 import { getPublicAboutTeamMember, getPublicSoundscape, safeUser } from '../services/presenters';
 import { deleteCloudinaryAsset, uploadCloudinaryAsset, type CloudinaryAsset } from '../services/cloudinaryStorage';
-import { normalizeSocialLinks } from '../../../src/utils/socialLinks';
+import { normalizeSocialLinks } from '../utils/socialLinks';
 import { getAdminIdentity } from '../middleware/adminAuth';
 import {
   addCustomAIProvider,
