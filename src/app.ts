@@ -1,7 +1,7 @@
 
 import express from 'express';
 import dns from 'node:dns';
-import apiRoutes from './routes/index.ts';
+import apiRoutes from './routes/index';
 
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 
