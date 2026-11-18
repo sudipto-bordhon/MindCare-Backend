@@ -10,7 +10,9 @@ const corsOrigins = new Set(
     .map(origin => origin.trim())
     .filter(Boolean),
 );
-
+app.get("/", (req, res) => {
+  res.send("MindCare Backend Server is running!");
+});
 app.use(express.json({ limit: '18mb' }));
 app.use('/api', (req, res, next) => {
   const origin = req.headers.origin;
