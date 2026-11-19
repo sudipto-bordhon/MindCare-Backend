@@ -1,27 +1,14 @@
-import { AgeBand, Language } from '../../types/index.ts';
-
-interface OfflineResponse {
-  reply: string;
-  isCrisis?: boolean;
-}
-
-interface WellnessFaq {
-  match: RegExp;
-  answerEn: string;
-  answerBn: string;
-}
-
 const crisisPatterns = [
   /suicide|kill myself|end my life|want to die|self[- ]?harm|cutting myself/i,
   /আত্মহত্যা|মরতে চাই|নিজেকে শেষ|জীবন শেষ/,
 ];
 
-const crisisReplies: Record<Language, string> = {
+const crisisReplies = {
   en: `I’m so sorry you’re carrying this much pain. You matter, and you deserve caring, human support right now. If you might hurt yourself or are in immediate danger, please go to someone you trust and tell them plainly how you’re feeling. In Bangladesh, call 999 or go to the nearest emergency department. You can also call the mental-health helpline at 16122 or Kaan Pete Roi at 01779554391. I’m here to listen, but I’m an offline assistant and can’t provide emergency care.`,
   bn: `আপনি এত কষ্টের মধ্যে আছেন শুনে সত্যিই খারাপ লাগছে। আপনি গুরুত্বপূর্ণ, আর এই মুহূর্তে একজন মানুষের স্নেহময় সহায়তা পাওয়ার যোগ্য। নিজেকে আঘাত করার আশঙ্কা বা তাৎক্ষণিক বিপদ থাকলে দয়া করে এখনই বিশ্বস্ত কারও কাছে যান এবং তাঁকে স্পষ্ট করে বলুন আপনি কেমন অনুভব করছেন। বাংলাদেশে ৯৯৯ নম্বরে কল করুন অথবা নিকটস্থ হাসপাতালের জরুরি বিভাগে যান। মানসিক স্বাস্থ্য সহায়তায় ১৬১২২ বা কান পেতে রই ০১৭৭৯৫৫৪৩৯১ নম্বরেও যোগাযোগ করতে পারেন। আমি শুনতে আছি, তবে অফলাইন সহকারী হিসেবে জরুরি সেবা দিতে পারি না।`,
 };
 
-const wellnessFaqs: WellnessFaq[] = [
+const wellnessFaqs = [
   {
     match: /friend|someone.*(sad|depress|struggl)|help.*(friend|someone)|বন্ধু|কাউকে.*(সাহায্য|মন খারাপ)|কীভাবে.*সাহায্য/,
     answerEn: `It’s kind of you to want to be there for them. You don’t need perfect words—listening without judgment can mean a lot. You might say, “I care about you. Would you like to talk, or is there something practical I can do?” Keep checking in, and gently offer help finding a professional if they want it. If they’re in immediate danger, stay with them and contact emergency support.`,
@@ -98,16 +85,6 @@ const wellnessFaqs: WellnessFaq[] = [
     answerBn: `আপনার ভালো লাগলে, চলুন ধীরে বর্তমানের দিকে মন দিই: ৫টি দেখা জিনিস, শরীরে অনুভব করা ৪টি, শোনা ৩টি, গন্ধ পাওয়া ২টি এবং স্বাদ পাওয়া ১টি বিষয় খেয়াল করুন। সময় নিন, আর কোনো কিছু অস্বস্তিকর হলে বাদ দিন। এটি ঠিক বা ভুল করার পরীক্ষা নয়।`,
   },
   {
-    match: /therap(y|ist)|counsel(l)?or|professional|ডাক্তার|কাউন্সেল|থেরাপি|বিশেষজ্ঞ/,
-    answerEn: `Reaching out doesn’t mean you have to be at breaking point—it’s a caring step for yourself. A counselor, psychologist, or doctor can listen and help you explore what might make things easier. You could start with what you’ve been feeling, how long it’s been going on, and what support you hope for.`,
-    answerBn: `একেবারে ভেঙে পড়ার পরেই সাহায্য চাইতে হবে—এমন নয়; আগে থেকে কথা বলা নিজের প্রতি যত্নের একটি পদক্ষেপ। কাউন্সেলর, মনোবিজ্ঞানী বা চিকিৎসক আপনার কথা শুনে কীভাবে সহজ করা যায় তা খুঁজতে সাহায্য করতে পারেন। কেমন লাগছে, কতদিন ধরে এমন হচ্ছে, আর কী ধরনের সহায়তা চান—এগুলো দিয়ে শুরু করতে পারেন।`,
-  },
-  {
-    match: /focus|concentrat|overthink|racing thoughts|মনোযোগ|অতিরিক্ত চিন্তা|ভাবনা থামে না/,
-    answerEn: `A busy mind can be tiring; it’s okay if focus doesn’t come instantly. Try writing down the thoughts, then choose one small task for just 10 minutes. A stretch or a screen break might help. If a worry can wait, give it a time to revisit instead of asking yourself to solve it all now.`,
-    answerBn: `মাথায় অনেক চিন্তা থাকলে ক্লান্ত লাগা স্বাভাবিক—সঙ্গে সঙ্গে মনোযোগ না এলেও সমস্যা নেই। ভাবনাগুলো লিখে রেখে মাত্র ১০ মিনিটের জন্য একটি ছোট কাজ বেছে নিতে পারেন। একটু স্ট্রেচিং বা স্ক্রিন থেকে বিরতি কাজে লাগতে পারে। কোনো দুশ্চিন্তা পরে ভাবা সম্ভব হলে, এখনই সব সমাধানের চাপ না নিয়ে পরে দেখার সময় ঠিক করুন।`,
-  },
-  {
     match: /self.?care|মন ভালো রাখ|নিজের যত্ন|নিজেকে.*যত্ন|wellbeing|well-being/,
     answerEn: `You deserve care too. Self-care doesn’t have to be fancy: a meal, some water, a little fresh air, a few minutes of rest, or a kind message to someone you trust all count. Pick just one small thing that feels gentle and doable today.`,
     answerBn: `আপনিও যত্ন পাওয়ার যোগ্য। নিজের যত্ন মানেই বড় কিছু নয়—একটু খাবার, পানি, খোলা বাতাসে কয়েক মিনিট, বিশ্রাম, বা বিশ্বস্ত কাউকে স্নেহের বার্তা—সবই যত্ন। আজ আপনার কাছে কোমল ও সহজ মনে হয় এমন একটি ছোট কাজ বেছে নিন।`,
@@ -164,27 +141,35 @@ const wellnessFaqs: WellnessFaq[] = [
   },
 ];
 
-export function getOfflineWellnessResponse(message: string, language: Language, ageBand: AgeBand): OfflineResponse {
-  if (crisisPatterns.some(pattern => pattern.test(message))) {
-    const reply = ageBand === 'child_teen'
-      ? language === 'bn'
-        ? `আপনি যদি ১৮ বছরের কম হন, এখনই একজন নিরাপদ ও বিশ্বস্ত প্রাপ্তবয়স্ক—যেমন অভিভাবক, শিক্ষক বা কাউন্সেলর—কে জানান এবং একা থাকবেন না। তাৎক্ষণিক বিপদে বাংলাদেশে ৯৯৯ নম্বরে কল করুন বা নিকটস্থ হাসপাতালের জরুরি বিভাগে যান। মানসিক স্বাস্থ্য সহায়তায় ১৬১২২ বা কান পেতে রই ০১৭৭৯৫৫৪৩৯১ নম্বরে যোগাযোগ করতে পারেন। আমি অফলাইন সহকারী হিসেবে জরুরি সেবা দিতে পারি না।`
-        : `If you are under 18, please tell a safe, trusted adult now—such as a parent or guardian, teacher, or counselor—and do not stay alone. If you are in immediate danger in Bangladesh, call 999 or go to the nearest emergency department. You can also contact the mental-health helpline at 16122 or Kaan Pete Roi at 01779554391. I’m an offline assistant and can’t provide emergency care.`
-      : crisisReplies[language];
+export function getOfflineWellnessResponse(message, language, ageBand) {
+  if (crisisPatterns.some((pattern) => pattern.test(message))) {
+    const reply =
+      ageBand === 'child_teen'
+        ? language === 'bn'
+          ? `আপনি যদি ১৮ বছরের কম হন, এখনই একজন নিরাপদ ও বিশ্বস্ত প্রাপ্তবয়স্ক—যেমন অভিভাবক, শিক্ষক বা কাউন্সেলর—কে জানান এবং একা থাকবেন না। তাৎক্ষণিক বিপদে বাংলাদেশে ৯৯৯ নম্বরে কল করুন বা নিকটস্থ হাসপাতালের জরুরি বিভাগে যান। মানসিক স্বাস্থ্য সহায়তায় ১৬১২২ বা কান পেতে রই ০১৭৭৯৫৫৪৩৯১ নম্বরে যোগাযোগ করতে পারেন। আমি অফলাইন সহকারী হিসেবে জরুরি সেবা দিতে পারি না।`
+          : `If you are under 18, please tell a safe, trusted adult now—such as a parent or guardian, teacher, or counselor—and do not stay alone. If you are in immediate danger in Bangladesh, call 999 or go to the nearest emergency department. You can also contact the mental-health helpline at 16122 or Kaan Pete Roi at 01779554391. I’m an offline assistant and can’t provide emergency care.`
+        : crisisReplies[language];
+
     return { reply, isCrisis: true };
   }
 
-  const faq = wellnessFaqs.find(item => item.match.test(message));
+  const faq = wellnessFaqs.find((item) => item.match.test(message));
   const answer = faq ? (language === 'bn' ? faq.answerBn : faq.answerEn) : null;
-  const connectionNotice = language === 'bn'
-    ? 'Mind Assistant-এর সঙ্গে এখন সংযোগ করা যাচ্ছে না, তবে আমি যতটা পারি পাশে আছি।'
-    : 'Mind Assistant can’t connect right now, but I’ll do my best to support you.';
-  const followUp = language === 'bn'
-    ? 'এই সাধারণ পরামর্শ চিকিৎসা বা রোগ নির্ণয়ের বিকল্প নয়।'
-    : 'This general guidance is not a substitute for professional care or diagnosis.';
-  const unableToMatch = language === 'bn'
-    ? 'এই প্রশ্নটির নির্দিষ্ট উত্তর এখন আমার জানা নেই, তাই অনুমান করে বলতে চাই না। মানসিক চাপ, উদ্বেগ, ঘুম, মন খারাপ, একাকিত্ব বা শ্বাসের অনুশীলন নিয়ে জিজ্ঞেস করলে আমি যত্ন নিয়ে সাহায্য করার চেষ্টা করব।'
-    : 'I don’t have a reliable answer to that specific question while offline, and I don’t want to guess. You can ask about stress, anxiety, sleep, low mood, loneliness, or a breathing exercise, and I’ll do my best to help.';
+
+  const connectionNotice =
+    language === 'bn'
+      ? 'Mind Assistant-এর সঙ্গে এখন সংযোগ করা যাচ্ছে না, তবে আমি যতটা পারি পাশে আছি।'
+      : 'Mind Assistant can’t connect right now, but I’ll do my best to support you.';
+
+  const followUp =
+    language === 'bn'
+      ? 'এই সাধারণ পরামর্শ চিকিৎসা বা রোগ নির্ণয়ের বিকল্প নয়।'
+      : 'This general guidance is not a substitute for professional care or diagnosis.';
+
+  const unableToMatch =
+    language === 'bn'
+      ? 'এই প্রশ্নটির নির্দিষ্ট উত্তর এখন আমার জানা নেই, তাই অনুমান করে বলতে চাই না। মানসিক চাপ, উদ্বেগ, ঘুম, মন খারাপ, একাকিত্ব বা শ্বাসের অনুশীলন নিয়ে জিজ্ঞেস করলে আমি যত্ন নিয়ে সাহায্য করার চেষ্টা করব।'
+      : 'I don’t have a reliable answer to that specific question while offline, and I don’t want to guess. You can ask about stress, anxiety, sleep, low mood, loneliness, or a breathing exercise, and I’ll do my best to help.';
 
   return {
     reply: `${connectionNotice}\n\n${answer || unableToMatch}\n\n${followUp}`,

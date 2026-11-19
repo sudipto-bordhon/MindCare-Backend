@@ -1,11 +1,10 @@
-import type { RequestHandler } from 'express';
 import { randomUUID } from 'node:crypto';
-import { AboutTeamConfigModel, AboutTeamMemberModel, BUILT_IN_SOUND_TYPES, CrisisHelplineConfigModel, DEFAULT_ABOUT_TEAM_MEMBER_IDS, DonationSettingsModel, SoundscapeModel, UserModel, getAboutTeamMemberIds, isMongoConnected, loadCrisisHelplines, loadDonationSettings, memoryUsers, type AboutTeamMemberRecord, type AmbientSoundscapeRecord, type AppUser, type CrisisHelplineConfigRecord, type DonationSettingsRecord } from '../models/database';
-import { parseCrisisHelplines } from '../../crisisHelplines';
-import { getPublicAboutTeamMember, getPublicSoundscape, safeUser } from '../services/presenters';
-import { deleteCloudinaryAsset, uploadCloudinaryAsset, type CloudinaryAsset } from '../services/cloudinaryStorage';
-import { normalizeSocialLinks } from '../utils/socialLinks';
-import { getAdminIdentity } from '../middleware/adminAuth';
+import { AboutTeamConfigModel, AboutTeamMemberModel, BUILT_IN_SOUND_TYPES, CrisisHelplineConfigModel, DEFAULT_ABOUT_TEAM_MEMBER_IDS, DonationSettingsModel, SoundscapeModel, UserModel, getAboutTeamMemberIds, isMongoConnected, loadCrisisHelplines, loadDonationSettings, memoryUsers } from '../models/database.js';
+import { parseCrisisHelplines } from '../../crisisHelplines.js';
+import { getPublicAboutTeamMember, getPublicSoundscape, safeUser } from '../services/presenters.js';
+import { deleteCloudinaryAsset, uploadCloudinaryAsset } from '../services/cloudinaryStorage.js';
+import { normalizeSocialLinks } from '../utils/socialLinks.js';
+import { getAdminIdentity } from '../middleware/adminAuth.js';
 import {
   addCustomAIProvider,
   addCustomAIProviderKeys,
@@ -20,37 +19,34 @@ import {
   setPreferredAIKey,
   setUseEnvironmentAIKeys,
   updateCustomAIProviderSettings,
-  type AIProvider,
-} from '../ai/keyStore';
+} from '../ai/keyStore.js';
 
-function getAIKeyMutationError(error: unknown): { status: number; message: string } {
+function getAIKeyMutationError(error) {
   const message = error instanceof Error ? error.message : 'AI key settings could not be saved.';
   const isInvalidRequest = /already configured|already exists|maximum of \d+|choose an available key/i.test(message);
   return { status: isInvalidRequest ? 400 : 503, message };
 }
 
-function isAIProvider(value: unknown): value is AIProvider {
+function isAIProvider(value) {
   return value === 'gemini' || value === 'openai';
 }
 
-function isValidAIKey(value: unknown): value is string {
+function isValidAIKey(value) {
   return typeof value === 'string'
     && value.trim().length >= 8
     && value.trim().length <= 500
     && !/\s/.test(value.trim());
 }
 
-function isValidAIKeyList(keys: unknown): keys is string[] {
+function isValidAIKeyList(keys) {
   return Array.isArray(keys)
     && keys.length >= 1
     && keys.length <= 10
     && keys.every(isValidAIKey);
 }
 
-function uniqueCloudinaryAssets(
-  assets: Array<{ publicId: string; resourceType: CloudinaryAsset['resourceType']; secureUrl?: string } | undefined>,
-): CloudinaryAsset[] {
-  const unique = new Map<string, CloudinaryAsset>();
+function uniqueCloudinaryAssets(assets) {
+  const unique = new Map();
   for (const asset of assets) {
     if (asset) unique.set(`${asset.resourceType}:${asset.publicId}`, {
       publicId: asset.publicId,
@@ -61,8 +57,8 @@ function uniqueCloudinaryAssets(
   return [...unique.values()];
 }
 
-async function deleteCloudinaryAssets(assets: CloudinaryAsset[]): Promise<CloudinaryAsset[]> {
-  const failed: CloudinaryAsset[] = [];
+async function deleteCloudinaryAssets(assets) {
+  const failed = [];
   for (const asset of assets) {
     try {
       await deleteCloudinaryAsset(asset);
@@ -73,17 +69,17 @@ async function deleteCloudinaryAssets(assets: CloudinaryAsset[]): Promise<Cloudi
   return failed;
 }
 
-function uploadedAsset(publicId: string | undefined, resourceType: CloudinaryAsset['resourceType']): CloudinaryAsset | undefined {
+function uploadedAsset(publicId, resourceType) {
   return publicId ? { publicId, resourceType, secureUrl: '' } : undefined;
 }
 
-function decodeBase64(value: string): Buffer | undefined {
+function decodeBase64(value) {
   if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) return undefined;
   const data = Buffer.from(value, 'base64');
   return data.length ? data : undefined;
 }
 
-export const getAdminAIKeys: RequestHandler = async (_req, res) => {
+export const getAdminAIKeys = async (_req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'AI key storage is unavailable without MongoDB.' });
   try {
     return res.json({ providers: await getAdminAIKeySettings() });
@@ -93,13 +89,13 @@ export const getAdminAIKeys: RequestHandler = async (_req, res) => {
   }
 };
 
-export const postAdminAIKeys: RequestHandler = async (req, res) => {
+export const postAdminAIKeys = async (req, res) => {
   const { provider, keys } = req.body || {};
   if (!isAIProvider(provider) || !isValidAIKeyList(keys)) {
     return res.status(400).json({ error: 'Choose a provider and enter 1 to 10 valid API keys.' });
   }
   try {
-    await addAdminAIKeys(provider, keys.map((key: string) => key.trim()));
+    await addAdminAIKeys(provider, keys.map(key => key.trim()));
     return res.json({ providers: await getAdminAIKeySettings() });
   } catch (error) {
     console.error('Admin AI key save error:', error);
@@ -108,7 +104,7 @@ export const postAdminAIKeys: RequestHandler = async (req, res) => {
   }
 };
 
-export const patchAdminAIKeys: RequestHandler = async (req, res) => {
+export const patchAdminAIKeys = async (req, res) => {
   const { provider, useEnvironmentKeys, preferredKeyId } = req.body || {};
   if (!isAIProvider(provider)) {
     return res.status(400).json({ error: 'A valid AI provider is required.' });
@@ -129,7 +125,7 @@ export const patchAdminAIKeys: RequestHandler = async (req, res) => {
   }
 };
 
-export const patchAdminAIKey: RequestHandler = async (req, res) => {
+export const patchAdminAIKey = async (req, res) => {
   const { provider } = req.params;
   const { key } = req.body || {};
   if (!isAIProvider(provider) || !isValidAIKey(key)) {
@@ -146,7 +142,7 @@ export const patchAdminAIKey: RequestHandler = async (req, res) => {
   }
 };
 
-export const postAdminCustomAIProvider: RequestHandler = async (req, res) => {
+export const postAdminCustomAIProvider = async (req, res) => {
   const { name, keys, model, enabledForAI } = req.body || {};
   const providerName = typeof name === 'string' ? name.trim() : '';
   if (providerName.length < 2 || providerName.length > 60 || !isValidAIKeyList(keys)) {
@@ -173,9 +169,9 @@ export const postAdminCustomAIProvider: RequestHandler = async (req, res) => {
   }
 };
 
-export const patchAdminCustomAIProvider: RequestHandler = async (req, res) => {
+export const patchAdminCustomAIProvider = async (req, res) => {
   const { name, model, enabledForAI } = req.body || {};
-  const settings: { name?: string; model?: string; enabledForAI?: boolean } = {};
+  const settings = {};
   if (name !== undefined) {
     const providerName = typeof name === 'string' ? name.trim() : '';
     if (providerName.length < 2 || providerName.length > 60) {
@@ -212,7 +208,7 @@ export const patchAdminCustomAIProvider: RequestHandler = async (req, res) => {
   }
 };
 
-export const patchAdminCustomAIProviderPreferredKey: RequestHandler = async (req, res) => {
+export const patchAdminCustomAIProviderPreferredKey = async (req, res) => {
   const keyId = typeof req.body?.keyId === 'string' ? req.body.keyId : '';
   if (!keyId) return res.status(400).json({ error: 'Choose a key to prefer.' });
   try {
@@ -226,7 +222,7 @@ export const patchAdminCustomAIProviderPreferredKey: RequestHandler = async (req
   }
 };
 
-export const deleteAdminCustomAIProvider: RequestHandler = async (req, res) => {
+export const deleteAdminCustomAIProvider = async (req, res) => {
   try {
     const removed = await deleteCustomAIProvider(req.params.id);
     if (!removed) return res.status(404).json({ error: 'Custom AI provider not found.' });
@@ -238,7 +234,7 @@ export const deleteAdminCustomAIProvider: RequestHandler = async (req, res) => {
   }
 };
 
-export const postAdminCustomAIProviderKeys: RequestHandler = async (req, res) => {
+export const postAdminCustomAIProviderKeys = async (req, res) => {
   const { keys } = req.body || {};
   if (!isValidAIKeyList(keys)) {
     return res.status(400).json({ error: 'Enter 1 to 10 valid API keys.' });
@@ -254,7 +250,7 @@ export const postAdminCustomAIProviderKeys: RequestHandler = async (req, res) =>
   }
 };
 
-export const patchAdminCustomAIProviderKey: RequestHandler = async (req, res) => {
+export const patchAdminCustomAIProviderKey = async (req, res) => {
   const { key } = req.body || {};
   if (!isValidAIKey(key)) return res.status(400).json({ error: 'Enter a valid replacement API key.' });
   try {
@@ -268,7 +264,7 @@ export const patchAdminCustomAIProviderKey: RequestHandler = async (req, res) =>
   }
 };
 
-export const deleteAdminCustomAIProviderKey: RequestHandler = async (req, res) => {
+export const deleteAdminCustomAIProviderKey = async (req, res) => {
   try {
     const removed = await deleteCustomAIProviderKey(req.params.providerId, req.params.keyId);
     if (!removed) return res.status(404).json({ error: 'Custom AI provider key not found.' });
@@ -280,7 +276,7 @@ export const deleteAdminCustomAIProviderKey: RequestHandler = async (req, res) =
   }
 };
 
-export const deleteAdminAIKey: RequestHandler = async (req, res) => {
+export const deleteAdminAIKey = async (req, res) => {
   const { provider } = req.params;
   const id = typeof req.params.id === 'string' ? req.params.id : '';
   if (!isAIProvider(provider) || !id) return res.status(400).json({ error: 'A valid provider and key ID are required.' });
@@ -295,12 +291,12 @@ export const deleteAdminAIKey: RequestHandler = async (req, res) => {
   }
 };
 
-export const getAdminUsers: RequestHandler = async (req, res) => {
+export const getAdminUsers = async (req, res) => {
   try {
     const databaseUsers = isMongoConnected
       ? await UserModel.find({}, { password: 0, _id: 0 }).sort({ createdAt: -1 }).lean()
       : [];
-    const usersByEmail = new Map<string, Record<string, unknown>>();
+    const usersByEmail = new Map();
     for (const user of databaseUsers) {
       usersByEmail.set(String(user.email).toLowerCase(), user);
     }
@@ -318,7 +314,7 @@ export const getAdminUsers: RequestHandler = async (req, res) => {
   }
 };
 
-export const patchAdminUsersById: RequestHandler = async (req, res) => {
+export const patchAdminUsersById = async (req, res) => {
   const { role } = req.body;
   if (!['user', 'counselor', 'admin', 'super_admin'].includes(role)) {
     return res.status(400).json({ error: 'Invalid user role.' });
@@ -346,7 +342,7 @@ export const patchAdminUsersById: RequestHandler = async (req, res) => {
   }
 };
 
-export const deleteAdminUsersById: RequestHandler = async (req, res) => {
+export const deleteAdminUsersById = async (req, res) => {
   if (req.params.id === 'user_system_admin') {
     return res.status(400).json({ error: 'The system administrator cannot be deleted.' });
   }
@@ -366,7 +362,7 @@ export const deleteAdminUsersById: RequestHandler = async (req, res) => {
   }
 };
 
-export const getAdminCrisisHelplines: RequestHandler = async (req, res) => {
+export const getAdminCrisisHelplines = async (req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'Crisis helpline storage is unavailable.' });
   try {
     return res.json({ helplines: await loadCrisisHelplines() });
@@ -376,7 +372,7 @@ export const getAdminCrisisHelplines: RequestHandler = async (req, res) => {
   }
 };
 
-export const putAdminCrisisHelplines: RequestHandler = async (req, res) => {
+export const putAdminCrisisHelplines = async (req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'Crisis helpline storage is unavailable.' });
   const helplines = parseCrisisHelplines(req.body?.helplines);
   if (!helplines) {
@@ -388,7 +384,7 @@ export const putAdminCrisisHelplines: RequestHandler = async (req, res) => {
       { id: 'crisis-helplines' },
       { $set: { helplines } },
       { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
-    ).lean<CrisisHelplineConfigRecord>();
+    ).lean();
     if (!saved) throw new Error('Unable to save crisis helplines.');
     return res.json({ helplines: saved.helplines });
   } catch (error) {
@@ -397,7 +393,7 @@ export const putAdminCrisisHelplines: RequestHandler = async (req, res) => {
   }
 };
 
-export const getAdminDonationSettings: RequestHandler = async (_req, res) => {
+export const getAdminDonationSettings = async (_req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'Donation settings storage is unavailable.' });
   try {
     const settings = await loadDonationSettings();
@@ -412,7 +408,7 @@ export const getAdminDonationSettings: RequestHandler = async (_req, res) => {
   }
 };
 
-export const putAdminDonationSettings: RequestHandler = async (req, res) => {
+export const putAdminDonationSettings = async (req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'Donation settings storage is unavailable.' });
 
   const rawNumber = req.body?.bkashNumber;
@@ -433,7 +429,7 @@ export const putAdminDonationSettings: RequestHandler = async (req, res) => {
     const admin = await UserModel.findOne(
       { id: identity.userId, role: { $in: ['admin', 'super_admin'] } },
       { id: 1, name: 1, email: 1, _id: 0 },
-    ).lean<{ id: string; name: string; email: string }>();
+    ).lean();
     if (!admin) return res.status(403).json({ error: 'Admin account could not be found for audit logging.' });
 
     const current = await loadDonationSettings();
@@ -464,7 +460,7 @@ export const putAdminDonationSettings: RequestHandler = async (req, res) => {
         },
       },
       { returnDocument: 'after' },
-    ).lean<DonationSettingsRecord>();
+    ).lean();
     if (!saved) {
       return res.status(409).json({ error: 'Donation settings changed in another admin session. Reload them and try again.' });
     }
@@ -479,12 +475,12 @@ export const putAdminDonationSettings: RequestHandler = async (req, res) => {
   }
 };
 
-export const getAdminAboutTeam: RequestHandler = async (req, res) => {
+export const getAdminAboutTeam = async (req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'About profile storage is unavailable.' });
   try {
     const memberIds = await getAboutTeamMemberIds();
     const profiles = await AboutTeamMemberModel.find({ id: { $in: memberIds } }, { imageData: 0, cvData: 0, _id: 0, __v: 0 })
-      .lean<AboutTeamMemberRecord[]>();
+      .lean();
     const profilesById = new Map(profiles.map(member => [member.id, member]));
     return res.json({ members: memberIds.map(id => getPublicAboutTeamMember(profilesById.get(id) || { id })) });
   } catch (error) {
@@ -493,7 +489,7 @@ export const getAdminAboutTeam: RequestHandler = async (req, res) => {
   }
 };
 
-export const putAdminAboutTeam: RequestHandler = async (req, res) => {
+export const putAdminAboutTeam = async (req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'About profile storage is unavailable.' });
 
   const body = req.body || {};
@@ -513,7 +509,7 @@ export const putAdminAboutTeam: RequestHandler = async (req, res) => {
   if (!socialLinks) return res.status(400).json({ error: 'Enter valid social profile links using http or https.' });
   const imageData = imageBase64 ? decodeBase64(imageBase64) : undefined;
   const cvData = cvBase64 ? decodeBase64(cvBase64) : undefined;
-  const imageSignatures: Record<string, (data: Buffer) => boolean> = {
+  const imageSignatures = {
     'image/jpeg': data => data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff,
     'image/png': data => data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
     'image/webp': data => data.subarray(0, 4).toString('ascii') === 'RIFF'
@@ -539,14 +535,14 @@ export const putAdminAboutTeam: RequestHandler = async (req, res) => {
     }
   }
 
-  const uploadedAssets: CloudinaryAsset[] = [];
+  const uploadedAssets = [];
   let profileSaved = false;
   try {
     const memberIds = await getAboutTeamMemberIds();
     if (!memberIds.includes(id)) return res.status(404).json({ error: 'Team card not found.' });
-    const previous = await AboutTeamMemberModel.findOne({ id }).lean<AboutTeamMemberRecord | null>();
-    let imageAsset: CloudinaryAsset | undefined;
-    let cvAsset: CloudinaryAsset | undefined;
+    const previous = await AboutTeamMemberModel.findOne({ id }).lean();
+    let imageAsset;
+    let cvAsset;
     if (imageData) {
       imageAsset = await uploadCloudinaryAsset(imageData, {
         folder: 'mindcare/about-team',
@@ -569,7 +565,7 @@ export const putAdminAboutTeam: RequestHandler = async (req, res) => {
       imageAsset ? uploadedAsset(previous?.imageCloudinaryId, 'image') : undefined,
       cvAsset ? uploadedAsset(previous?.cvCloudinaryId, 'raw') : undefined,
     ]);
-    const update: Partial<AboutTeamMemberRecord> = {
+    const update = {
       name,
       phone,
       position,
@@ -597,7 +593,7 @@ export const putAdminAboutTeam: RequestHandler = async (req, res) => {
       { id },
       { $set: update, ...(Object.keys(unset).length ? { $unset: unset } : {}) },
       { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
-    ).lean<AboutTeamMemberRecord | null>();
+    ).lean();
     if (!saved) throw new Error('Unable to save the team profile.');
     profileSaved = true;
     const failedDeletes = await deleteCloudinaryAssets(cleanupAssets);
@@ -619,7 +615,7 @@ export const putAdminAboutTeam: RequestHandler = async (req, res) => {
   }
 };
 
-export const postAdminAboutTeam: RequestHandler = async (req, res) => {
+export const postAdminAboutTeam = async (req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'About profile storage is unavailable.' });
   try {
     await getAboutTeamMemberIds();
@@ -637,14 +633,14 @@ export const postAdminAboutTeam: RequestHandler = async (req, res) => {
   }
 };
 
-export const deleteAdminAboutTeam: RequestHandler = async (req, res) => {
+export const deleteAdminAboutTeam = async (req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'About profile storage is unavailable.' });
   const id = typeof req.body?.id === 'string' ? req.body.id : '';
   if (!id) return res.status(400).json({ error: 'A team card ID is required.' });
   try {
     const [config, member] = await Promise.all([
       AboutTeamConfigModel.findOne({ id: 'about-team' }).lean(),
-      AboutTeamMemberModel.findOne({ id }).lean<AboutTeamMemberRecord | null>(),
+      AboutTeamMemberModel.findOne({ id }).lean(),
     ]);
     if (!config?.memberIds.includes(id)) return res.status(404).json({ error: 'Team card not found.' });
     const assets = uniqueCloudinaryAssets([
@@ -664,12 +660,12 @@ export const deleteAdminAboutTeam: RequestHandler = async (req, res) => {
   }
 };
 
-export const getAdminSoundscapes: RequestHandler = async (req, res) => {
+export const getAdminSoundscapes = async (req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'Sound library storage is unavailable.' });
   try {
     const saved = await SoundscapeModel.find({}, { audioData: 0, _id: 0, __v: 0 })
       .sort({ createdAt: -1 })
-      .lean<Pick<AmbientSoundscapeRecord, 'id' | 'titleEn' | 'titleBn' | 'audioFileName' | 'audioUrl' | 'soundType'>[]>();
+      .lean();
     return res.json({ soundscapes: saved.map(getPublicSoundscape) });
   } catch (error) {
     console.error('Admin soundscape load error:', error);
@@ -677,7 +673,7 @@ export const getAdminSoundscapes: RequestHandler = async (req, res) => {
   }
 };
 
-export const postAdminSoundscapes: RequestHandler = async (req, res) => {
+export const postAdminSoundscapes = async (req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'Sound library storage is unavailable.' });
 
   const { titleEn = '', titleBn = '', fileName = '', contentType = '', audioBase64 = '' } = req.body || {};
@@ -701,7 +697,7 @@ export const postAdminSoundscapes: RequestHandler = async (req, res) => {
     return res.status(400).json({ error: 'Choose a supported audio file.' });
   }
 
-  let uploaded: CloudinaryAsset | undefined;
+  let uploaded;
   let soundscapeSaved = false;
   try {
     const titleEnValue = titleEn.trim().slice(0, 100);
@@ -733,7 +729,7 @@ export const postAdminSoundscapes: RequestHandler = async (req, res) => {
   }
 };
 
-export const patchAdminSoundscapes: RequestHandler = async (req, res) => {
+export const patchAdminSoundscapes = async (req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'Sound library storage is unavailable.' });
 
   const { id = '', titleEn = '', titleBn = '', fileName = '', contentType = '', audioBase64 = '' } = req.body || {};
@@ -753,7 +749,7 @@ export const patchAdminSoundscapes: RequestHandler = async (req, res) => {
   }
 
   const hasAudioUpdate = Boolean(fileName || contentType || audioBase64);
-  let audioData: Buffer | undefined;
+  let audioData;
   let extension = '';
   if (hasAudioUpdate) {
     audioData = decodeBase64(audioBase64);
@@ -767,10 +763,10 @@ export const patchAdminSoundscapes: RequestHandler = async (req, res) => {
     }
   }
 
-  let uploaded: CloudinaryAsset | undefined;
+  let uploaded;
   let soundscapeSaved = false;
   try {
-    const previous = await SoundscapeModel.findOne({ id }).lean<AmbientSoundscapeRecord | null>();
+    const previous = await SoundscapeModel.findOne({ id }).lean();
     const isBuiltIn = Boolean(BUILT_IN_SOUND_TYPES[id]);
     if (!previous && !isBuiltIn) return res.status(404).json({ error: 'Soundscape not found.' });
     if (audioData) {
@@ -785,7 +781,7 @@ export const patchAdminSoundscapes: RequestHandler = async (req, res) => {
       ...(previous?.pendingCloudinaryDeletions || []),
       uploaded ? uploadedAsset(previous?.audioCloudinaryId, 'video') : undefined,
     ]);
-    const update: Partial<AmbientSoundscapeRecord> = {
+    const update = {
       titleEn: titleEnValue || titleBnValue,
       titleBn: titleBnValue || titleEnValue,
       pendingCloudinaryDeletions: cleanupAssets,
@@ -804,7 +800,7 @@ export const patchAdminSoundscapes: RequestHandler = async (req, res) => {
         ...(uploaded ? { $unset: { audioData: 1 } } : {}),
       },
       { upsert: isBuiltIn, returnDocument: 'after', setDefaultsOnInsert: true },
-    ).lean<AmbientSoundscapeRecord | null>();
+    ).lean();
     if (!saved) throw new Error('Unable to save the soundscape.');
     soundscapeSaved = true;
     const failedDeletes = await deleteCloudinaryAssets(cleanupAssets);
@@ -826,12 +822,12 @@ export const patchAdminSoundscapes: RequestHandler = async (req, res) => {
   }
 };
 
-export const deleteAdminSoundscapes: RequestHandler = async (req, res) => {
+export const deleteAdminSoundscapes = async (req, res) => {
   if (!isMongoConnected) return res.status(503).json({ error: 'Sound library storage is unavailable.' });
   const id = typeof req.body?.id === 'string' ? req.body.id : '';
   if (!id) return res.status(400).json({ error: 'Soundscape ID is required.' });
   try {
-    const soundscape = await SoundscapeModel.findOne({ id }).lean<AmbientSoundscapeRecord | null>();
+    const soundscape = await SoundscapeModel.findOne({ id }).lean();
     if (!soundscape) return res.status(404).json({ error: 'Soundscape not found.' });
     const assets = uniqueCloudinaryAssets([
       ...(soundscape.pendingCloudinaryDeletions || []),

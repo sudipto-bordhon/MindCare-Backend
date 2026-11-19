@@ -1,65 +1,19 @@
 import crypto from 'node:crypto';
-import {
-  AIProviderKeyConfigModel,
-  isMongoConnected,
-  type AIProviderKeyConfigRecord,
-  type CustomAIProviderRecord,
-  type EncryptedAIKeyRecord,
-} from '../models/database';
-
-export type AIProvider = 'gemini' | 'openai';
-
-export interface RuntimeAIKey {
-  id: string;
-  value: string;
-  source: 'admin' | 'environment';
-}
-
-export interface AdminAIKeyInfo {
-  id: string;
-  masked: string;
-  source: 'admin' | 'environment';
-}
-
-export interface AdminCustomAIProvider {
-  id: string;
-  name: string;
-  keys: Array<{ id: string; masked: string }>;
-  integration: 'openrouter' | null;
-  model: string;
-  enabledForAI: boolean;
-  preferredKeyId: string | null;
-  activeKeyId: string | null;
-}
-
-export interface RuntimeOpenRouterProvider {
-  id: string;
-  name: string;
-  model: string;
-  keys: RuntimeAIKey[];
-  preferredKeyId: string | null;
-}
-
-interface ProviderCache {
-  keys: RuntimeAIKey[];
-  useEnvironmentKeys: boolean;
-  preferredKeyId: string | null;
-  expiresAt: number;
-}
+import { AIProviderKeyConfigModel, isMongoConnected } from '../models/database.js';
 
 const CONFIG_ID = 'ai-provider-keys';
 const CACHE_TTL_MS = 15_000;
-const providerCache = new Map<AIProvider, ProviderCache>();
-const activeKeyIds = new Map<string, string>();
-let openRouterProviderCache: { providers: RuntimeOpenRouterProvider[]; expiresAt: number } | null = null;
+const providerCache = new Map();
+const activeKeyIds = new Map();
+let openRouterProviderCache = null;
 
-function providerFields(provider: AIProvider) {
+function providerFields(provider) {
   return provider === 'gemini'
-    ? { keys: 'geminiKeys', environment: 'useGeminiEnvironmentKeys', preferred: 'preferredGeminiKeyId' } as const
-    : { keys: 'openaiKeys', environment: 'useOpenAIEnvironmentKeys', preferred: 'preferredOpenAIKeyId' } as const;
+    ? { keys: 'geminiKeys', environment: 'useGeminiEnvironmentKeys', preferred: 'preferredGeminiKeyId' }
+    : { keys: 'openaiKeys', environment: 'useOpenAIEnvironmentKeys', preferred: 'preferredOpenAIKeyId' };
 }
 
-function environmentKeys(provider: AIProvider): RuntimeAIKey[] {
+function environmentKeys(provider) {
   const raw = provider === 'gemini' ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY;
   return (raw || '')
     .split(/[\r\n,]+/)
@@ -68,11 +22,11 @@ function environmentKeys(provider: AIProvider): RuntimeAIKey[] {
     .map((value, index) => ({
       id: `env-${provider}-${index + 1}`,
       value,
-      source: 'environment' as const,
+      source: 'environment',
     }));
 }
 
-function encryptionKey(): Buffer {
+function encryptionKey() {
   const secret = process.env.AI_KEYS_ENCRYPTION_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error('Set AI_KEYS_ENCRYPTION_SECRET to a random secret of at least 32 characters before managing AI keys.');
@@ -80,7 +34,7 @@ function encryptionKey(): Buffer {
   return crypto.createHash('sha256').update(secret, 'utf8').digest();
 }
 
-function encryptKey(value: string, id: string): EncryptedAIKeyRecord {
+function encryptKey(value, id) {
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey(), iv);
   cipher.setAAD(Buffer.from(id, 'utf8'));
@@ -94,7 +48,7 @@ function encryptKey(value: string, id: string): EncryptedAIKeyRecord {
   };
 }
 
-function decryptKey(record: EncryptedAIKeyRecord): string {
+function decryptKey(record) {
   const decipher = crypto.createDecipheriv(
     'aes-256-gcm',
     encryptionKey(),
@@ -108,26 +62,26 @@ function decryptKey(record: EncryptedAIKeyRecord): string {
   ]).toString('utf8');
 }
 
-async function loadStoredConfig(): Promise<AIProviderKeyConfigRecord | null> {
+async function loadStoredConfig() {
   if (!isMongoConnected) return null;
-  return AIProviderKeyConfigModel.findOne({ id: CONFIG_ID }).lean<AIProviderKeyConfigRecord>();
+  return AIProviderKeyConfigModel.findOne({ id: CONFIG_ID }).lean();
 }
 
-function orderedKeys(provider: string, keys: RuntimeAIKey[], preferredKeyId: string | null): RuntimeAIKey[] {
+function orderedKeys(provider, keys, preferredKeyId) {
   const activeKeyId = activeKeyIds.get(provider);
   if (!activeKeyId && !preferredKeyId) return keys;
-  const rank = (id: string) => id === activeKeyId ? 0 : id === preferredKeyId ? 1 : 2;
+  const rank = id => (id === activeKeyId ? 0 : id === preferredKeyId ? 1 : 2);
   return [...keys].sort((a, b) => rank(a.id) - rank(b.id));
 }
 
-export async function getRuntimeAIKeys(provider: AIProvider): Promise<RuntimeAIKey[]> {
+export async function getRuntimeAIKeys(provider) {
   const now = Date.now();
   const cached = providerCache.get(provider);
   if (cached && cached.expiresAt > now) return orderedKeys(provider, cached.keys, cached.preferredKeyId);
 
-  let storedKeys: RuntimeAIKey[] = [];
+  let storedKeys = [];
   let useEnvironmentKeys = true;
-  let preferredKeyId: string | null = null;
+  let preferredKeyId = null;
   try {
     const config = await loadStoredConfig();
     if (config) {
@@ -153,24 +107,24 @@ export async function getRuntimeAIKeys(provider: AIProvider): Promise<RuntimeAIK
   return orderedKeys(provider, keys, preferredKeyId);
 }
 
-export function markAIKeyActive(provider: AIProvider, id: string): void {
+export function markAIKeyActive(provider, id) {
   activeKeyIds.set(provider, id);
 }
 
-export function markOpenRouterKeyActive(providerId: string, id: string): void {
+export function markOpenRouterKeyActive(providerId, id) {
   activeKeyIds.set(`openrouter:${providerId}`, id);
 }
 
-export function getCachedActiveAIKeyId(provider: string): string | null {
+export function getCachedActiveAIKeyId(provider) {
   return activeKeyIds.get(provider) || null;
 }
 
-export function hasCachedAIProviderKeys(): boolean {
+export function hasCachedAIProviderKeys() {
   return Array.from(providerCache.values()).some(cache => cache.keys.length > 0)
     || Boolean(openRouterProviderCache?.providers.length);
 }
 
-export async function hasConfiguredAIProviderKeys(): Promise<boolean> {
+export async function hasConfiguredAIProviderKeys() {
   if (hasCachedAIProviderKeys()) return true;
   if (environmentKeys('gemini').length > 0 || environmentKeys('openai').length > 0) return true;
   const config = await loadStoredConfig();
@@ -186,7 +140,7 @@ export async function hasConfiguredAIProviderKeys(): Promise<boolean> {
   ));
 }
 
-export async function getRuntimeOpenRouterProviders(): Promise<RuntimeOpenRouterProvider[]> {
+export async function getRuntimeOpenRouterProviders() {
   if (openRouterProviderCache && openRouterProviderCache.expiresAt > Date.now()) {
     return openRouterProviderCache.providers.map(provider => ({
       ...provider,
@@ -207,7 +161,7 @@ export async function getRuntimeOpenRouterProviders(): Promise<RuntimeOpenRouter
       keys: provider.keys.map(key => ({
         id: key.id,
         value: decryptKey(key),
-        source: 'admin' as const,
+        source: 'admin',
       })),
     }];
   });
@@ -218,23 +172,11 @@ export async function getRuntimeOpenRouterProviders(): Promise<RuntimeOpenRouter
   }));
 }
 
-export async function getAdminAIKeySettings(): Promise<Record<AIProvider, {
-  keys: AdminAIKeyInfo[];
-  useEnvironmentKeys: boolean;
-  environmentConfigured: boolean;
-  activeKeyId: string | null;
-  preferredKeyId: string | null;
-}> & { customProviders: AdminCustomAIProvider[] }> {
+export async function getAdminAIKeySettings() {
   const config = await loadStoredConfig();
-  const settings = {} as Record<AIProvider, {
-    keys: AdminAIKeyInfo[];
-    useEnvironmentKeys: boolean;
-    environmentConfigured: boolean;
-    activeKeyId: string | null;
-    preferredKeyId: string | null;
-  }>;
+  const settings = {};
 
-  for (const provider of ['gemini', 'openai'] as const) {
+  for (const provider of ['gemini', 'openai']) {
     const fields = providerFields(provider);
     const managedRecords = config?.[fields.keys] || [];
     const environment = environmentKeys(provider);
@@ -244,18 +186,18 @@ export async function getAdminAIKeySettings(): Promise<Record<AIProvider, {
       ...managedRecords.map(record => ({
         id: record.id,
         masked: `••••${record.lastFour}`,
-        source: 'admin' as const,
+        source: 'admin',
       })),
       ...environment.map(key => ({
         id: key.id,
         masked: `••••${key.value.slice(-4)}`,
-        source: 'environment' as const,
+        source: 'environment',
       })),
     ];
     settings[provider] = {
       keys: activeKeyId || preferredKeyId
         ? keys.sort((a, b) => {
-          const rank = (id: string) => id === activeKeyId ? 0 : id === preferredKeyId ? 1 : 2;
+          const rank = id => (id === activeKeyId ? 0 : id === preferredKeyId ? 1 : 2);
           return rank(a.id) - rank(b.id);
         })
         : keys,
@@ -274,7 +216,7 @@ export async function getAdminAIKeySettings(): Promise<Record<AIProvider, {
       const keys = provider.keys.map(key => ({ id: key.id, masked: `••••${key.lastFour}` }));
       if (activeKeyId || preferredKeyId) {
         keys.sort((a, b) => {
-          const rank = (id: string) => id === activeKeyId ? 0 : id === preferredKeyId ? 1 : 2;
+          const rank = id => (id === activeKeyId ? 0 : id === preferredKeyId ? 1 : 2);
           return rank(a.id) - rank(b.id);
         });
       }
@@ -292,18 +234,18 @@ export async function getAdminAIKeySettings(): Promise<Record<AIProvider, {
   };
 }
 
-async function getOrCreateAIKeyConfig(): Promise<AIProviderKeyConfigRecord> {
+async function getOrCreateAIKeyConfig() {
   if (!isMongoConnected) throw new Error('MongoDB storage is required to manage AI keys.');
   const config = await AIProviderKeyConfigModel.findOneAndUpdate(
     { id: CONFIG_ID },
     { $setOnInsert: { geminiKeys: [], openaiKeys: [], customProviders: [], useGeminiEnvironmentKeys: true, useOpenAIEnvironmentKeys: true } },
     { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
-  ).lean<AIProviderKeyConfigRecord>();
+  ).lean();
   if (!config) throw new Error('Unable to initialize AI key storage.');
   return config;
 }
 
-export async function addAdminAIKeys(provider: AIProvider, values: string[]): Promise<void> {
+export async function addAdminAIKeys(provider, values) {
   const config = await getOrCreateAIKeyConfig();
   const fields = providerFields(provider);
   const existing = config[fields.keys];
@@ -322,14 +264,14 @@ export async function addAdminAIKeys(provider: AIProvider, values: string[]): Pr
   providerCache.delete(provider);
 }
 
-export async function removeAdminAIKey(provider: AIProvider, id: string): Promise<boolean> {
+export async function removeAdminAIKey(provider, id) {
   if (!isMongoConnected) throw new Error('MongoDB storage is required to manage AI keys.');
   const fields = providerFields(provider);
-  const config = await AIProviderKeyConfigModel.findOne({ id: CONFIG_ID }).lean<AIProviderKeyConfigRecord>();
+  const config = await AIProviderKeyConfigModel.findOne({ id: CONFIG_ID }).lean();
   if (!config) return false;
   const existing = config[fields.keys];
   if (!existing.some(record => record.id === id)) return false;
-  const update: Record<string, unknown> = {
+  const update = {
     $set: { [fields.keys]: existing.filter(record => record.id !== id) },
   };
   if (config[fields.preferred] === id) update.$unset = { [fields.preferred]: 1 };
@@ -342,7 +284,7 @@ export async function removeAdminAIKey(provider: AIProvider, id: string): Promis
   return true;
 }
 
-export async function replaceAdminAIKey(provider: AIProvider, id: string, value: string): Promise<boolean> {
+export async function replaceAdminAIKey(provider, id, value) {
   const config = await getOrCreateAIKeyConfig();
   const fields = providerFields(provider);
   const existing = config[fields.keys];
@@ -352,13 +294,13 @@ export async function replaceAdminAIKey(provider: AIProvider, id: string, value:
   }
   await AIProviderKeyConfigModel.updateOne(
     { id: CONFIG_ID },
-    { $set: { [fields.keys]: existing.map(record => record.id === id ? encryptKey(value, id) : record) } },
+    { $set: { [fields.keys]: existing.map(record => (record.id === id ? encryptKey(value, id) : record)) } },
   );
   providerCache.delete(provider);
   return true;
 }
 
-export async function setUseEnvironmentAIKeys(provider: AIProvider, enabled: boolean): Promise<void> {
+export async function setUseEnvironmentAIKeys(provider, enabled) {
   await getOrCreateAIKeyConfig();
   const fields = providerFields(provider);
   await AIProviderKeyConfigModel.findOneAndUpdate(
@@ -371,7 +313,7 @@ export async function setUseEnvironmentAIKeys(provider: AIProvider, enabled: boo
   );
   providerCache.delete(provider);
   if (!enabled) {
-    const config = await AIProviderKeyConfigModel.findOne({ id: CONFIG_ID }).lean<AIProviderKeyConfigRecord>();
+    const config = await AIProviderKeyConfigModel.findOne({ id: CONFIG_ID }).lean();
     if (config?.[fields.preferred]?.startsWith(`env-${provider}-`)) {
       await AIProviderKeyConfigModel.updateOne({ id: CONFIG_ID }, { $unset: { [fields.preferred]: 1 } });
     }
@@ -379,7 +321,7 @@ export async function setUseEnvironmentAIKeys(provider: AIProvider, enabled: boo
   }
 }
 
-export async function setPreferredAIKey(provider: AIProvider, id: string): Promise<void> {
+export async function setPreferredAIKey(provider, id) {
   const config = await getOrCreateAIKeyConfig();
   const fields = providerFields(provider);
   const managedKeys = config[fields.keys] || [];
@@ -394,20 +336,15 @@ export async function setPreferredAIKey(provider: AIProvider, id: string): Promi
   providerCache.delete(provider);
 }
 
-function normalizeProviderName(name: string): string {
+function normalizeProviderName(name) {
   return name.trim().replace(/\s+/g, ' ');
 }
 
-function encryptNewProviderKeys(values: string[]): EncryptedAIKeyRecord[] {
+function encryptNewProviderKeys(values) {
   return [...new Set(values)].map(value => encryptKey(value, crypto.randomUUID()));
 }
 
-export async function addCustomAIProvider(
-  name: string,
-  values: string[],
-  model: string,
-  enabledForAI: boolean,
-): Promise<void> {
+export async function addCustomAIProvider(name, values, model, enabledForAI) {
   const config = await getOrCreateAIKeyConfig();
   const normalizedName = normalizeProviderName(name);
   const existing = config.customProviders || [];
@@ -429,7 +366,7 @@ export async function addCustomAIProvider(
             id: crypto.randomUUID(),
             name: normalizedName,
             keys,
-            ...(enabledForAI ? { integration: 'openrouter' as const } : {}),
+            ...(enabledForAI ? { integration: 'openrouter' } : {}),
             model: model.trim(),
             enabledForAI,
             preferredKeyId: keys[0]?.id,
@@ -441,7 +378,7 @@ export async function addCustomAIProvider(
   openRouterProviderCache = null;
 }
 
-export async function renameCustomAIProvider(id: string, name: string): Promise<boolean> {
+export async function renameCustomAIProvider(id, name) {
   const config = await getOrCreateAIKeyConfig();
   const normalizedName = normalizeProviderName(name);
   const existing = config.customProviders || [];
@@ -452,16 +389,13 @@ export async function renameCustomAIProvider(id: string, name: string): Promise<
   }
   await AIProviderKeyConfigModel.updateOne(
     { id: CONFIG_ID },
-    { $set: { customProviders: existing.map(item => item.id === id ? { ...item, name: normalizedName } : item) } },
+    { $set: { customProviders: existing.map(item => (item.id === id ? { ...item, name: normalizedName } : item)) } },
   );
   openRouterProviderCache = null;
   return true;
 }
 
-export async function updateCustomAIProviderSettings(
-  id: string,
-  settings: { name?: string; model?: string; enabledForAI?: boolean },
-): Promise<boolean> {
+export async function updateCustomAIProviderSettings(id, settings) {
   const config = await getOrCreateAIKeyConfig();
   const providers = config.customProviders || [];
   const provider = providers.find(item => item.id === id);
@@ -479,15 +413,15 @@ export async function updateCustomAIProviderSettings(
     { id: CONFIG_ID },
     {
       $set: {
-        customProviders: providers.map(item => item.id === id
+        customProviders: providers.map(item => (item.id === id
           ? {
             ...item,
             name,
             model,
             enabledForAI,
-            ...(enabledForAI ? { integration: 'openrouter' as const } : { integration: undefined }),
+            ...(enabledForAI ? { integration: 'openrouter' } : { integration: undefined }),
           }
-          : item),
+          : item)),
       },
     },
   );
@@ -495,7 +429,7 @@ export async function updateCustomAIProviderSettings(
   return true;
 }
 
-export async function deleteCustomAIProvider(id: string): Promise<boolean> {
+export async function deleteCustomAIProvider(id) {
   const config = await getOrCreateAIKeyConfig();
   const existing = config.customProviders || [];
   if (!existing.some(provider => provider.id === id)) return false;
@@ -508,7 +442,7 @@ export async function deleteCustomAIProvider(id: string): Promise<boolean> {
   return true;
 }
 
-export async function addCustomAIProviderKeys(providerId: string, values: string[]): Promise<boolean> {
+export async function addCustomAIProviderKeys(providerId, values) {
   const config = await getOrCreateAIKeyConfig();
   const providers = config.customProviders || [];
   const provider = providers.find(item => item.id === providerId);
@@ -524,9 +458,9 @@ export async function addCustomAIProviderKeys(providerId: string, values: string
     { id: CONFIG_ID },
     {
       $set: {
-        customProviders: providers.map(item => item.id === providerId
+        customProviders: providers.map(item => (item.id === providerId
           ? { ...item, keys: [...item.keys, ...additions] }
-          : item),
+          : item)),
       },
     },
   );
@@ -534,7 +468,7 @@ export async function addCustomAIProviderKeys(providerId: string, values: string
   return true;
 }
 
-export async function replaceCustomAIProviderKey(providerId: string, keyId: string, value: string): Promise<boolean> {
+export async function replaceCustomAIProviderKey(providerId, keyId, value) {
   const config = await getOrCreateAIKeyConfig();
   const providers = config.customProviders || [];
   const provider = providers.find(item => item.id === providerId);
@@ -548,12 +482,12 @@ export async function replaceCustomAIProviderKey(providerId: string, keyId: stri
     { id: CONFIG_ID },
     {
       $set: {
-        customProviders: providers.map(item => item.id === providerId
+        customProviders: providers.map(item => (item.id === providerId
           ? {
             ...item,
-            keys: item.keys.map(key => key.id === keyId ? encryptKey(value, keyId) : key),
+            keys: item.keys.map(key => (key.id === keyId ? encryptKey(value, keyId) : key)),
           }
-          : item),
+          : item)),
       },
     },
   );
@@ -561,7 +495,7 @@ export async function replaceCustomAIProviderKey(providerId: string, keyId: stri
   return true;
 }
 
-export async function deleteCustomAIProviderKey(providerId: string, keyId: string): Promise<boolean> {
+export async function deleteCustomAIProviderKey(providerId, keyId) {
   const config = await getOrCreateAIKeyConfig();
   const providers = config.customProviders || [];
   const provider = providers.find(item => item.id === providerId);
@@ -570,7 +504,7 @@ export async function deleteCustomAIProviderKey(providerId: string, keyId: strin
     { id: CONFIG_ID },
     {
       $set: {
-        customProviders: providers.map(item => item.id === providerId
+        customProviders: providers.map(item => (item.id === providerId
           ? {
             ...item,
             keys: item.keys.filter(key => key.id !== keyId),
@@ -578,7 +512,7 @@ export async function deleteCustomAIProviderKey(providerId: string, keyId: strin
               ? item.keys.find(key => key.id !== keyId)?.id
               : item.preferredKeyId,
           }
-          : item),
+          : item)),
       },
     },
   );
@@ -587,7 +521,7 @@ export async function deleteCustomAIProviderKey(providerId: string, keyId: strin
   return true;
 }
 
-export async function setPreferredCustomAIKey(providerId: string, keyId: string): Promise<boolean> {
+export async function setPreferredCustomAIKey(providerId, keyId) {
   const config = await getOrCreateAIKeyConfig();
   const providers = config.customProviders || [];
   const provider = providers.find(item => item.id === providerId);
@@ -596,9 +530,9 @@ export async function setPreferredCustomAIKey(providerId: string, keyId: string)
     { id: CONFIG_ID },
     {
       $set: {
-        customProviders: providers.map(item => item.id === providerId
+        customProviders: providers.map(item => (item.id === providerId
           ? { ...item, preferredKeyId: keyId }
-          : item),
+          : item)),
       },
     },
   );

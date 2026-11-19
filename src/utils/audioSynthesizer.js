@@ -1,27 +1,33 @@
-let audioCtx: AudioContext | null = null;
-let currentNoiseNode: AudioNode | null = null;
-let currentGainNode: GainNode | null = null;
-let currentAudioPlayer: HTMLAudioElement | null = null;
+let audioCtx = null;
+let currentNoiseNode = null;
+let currentGainNode = null;
+let currentAudioPlayer = null;
 
-function getAudioContext(): AudioContext {
+function getAudioContext() {
   if (!audioCtx) {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
     audioCtx = new AudioContextClass();
   }
+
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
+
   return audioCtx;
 }
 
-export function playBreathChime(type: 'inhale' | 'hold' | 'exhale') {
+export function playBreathChime(type) {
   try {
     const ctx = getAudioContext();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
     osc.type = 'sine';
-    const freq = type === 'inhale' ? 440 : type === 'hold' ? 523.25 : 349.23; // A4, C5, F4
+
+    const freq =
+      type === 'inhale' ? 440 : type === 'hold' ? 523.25 : 349.23; // A4, C5, F4
+
     osc.frequency.setValueAtTime(freq, ctx.currentTime);
 
     gain.gain.setValueAtTime(0.01, ctx.currentTime);
@@ -38,8 +44,9 @@ export function playBreathChime(type: 'inhale' | 'hold' | 'exhale') {
   }
 }
 
-export function startAmbientSound(type: 'rain' | 'ocean' | 'forest' | 'birds' | 'whitenoise', volume = 0.25) {
+export function startAmbientSound(type, volume = 0.25) {
   stopAmbientSound();
+
   try {
     const ctx = getAudioContext();
     const bufferSize = ctx.sampleRate * 2;
@@ -47,21 +54,44 @@ export function startAmbientSound(type: 'rain' | 'ocean' | 'forest' | 'birds' | 
     const output = noiseBuffer.getChannelData(0);
 
     // Generate soothing pink/brown noise
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    let b0 = 0,
+      b1 = 0,
+      b2 = 0,
+      b3 = 0,
+      b4 = 0,
+      b5 = 0,
+      b6 = 0;
+
     for (let i = 0; i < bufferSize; i++) {
       const white = Math.random() * 2 - 1;
+
       b0 = 0.99886 * b0 + white * 0.0555179;
       b1 = 0.99332 * b1 + white * 0.0750759;
       b2 = 0.96900 * b2 + white * 0.1538520;
       b3 = 0.86650 * b3 + white * 0.3104856;
       b4 = 0.55000 * b4 + white * 0.5329522;
       b5 = -0.7616 * b5 - white * 0.0168980;
-      const baseNoise = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+
+      const baseNoise =
+        (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+
       const seconds = i / ctx.sampleRate;
-      const birdChirp = type === 'birds'
-        ? Math.sin(seconds * 2 * Math.PI * (1750 + 500 * Math.sin(seconds * 1.7))) * Math.max(0, Math.sin(seconds * 0.75)) ** 16 * 0.22
-        : 0;
-      output[i] = type === 'birds' ? baseNoise * 0.35 + birdChirp : baseNoise;
+
+      const birdChirp =
+        type === 'birds'
+          ? Math.sin(
+              seconds *
+                2 *
+                Math.PI *
+                (1750 + 500 * Math.sin(seconds * 1.7))
+            ) *
+            Math.max(0, Math.sin(seconds * 0.75)) ** 16 *
+            0.22
+          : 0;
+
+      output[i] =
+        type === 'birds' ? baseNoise * 0.35 + birdChirp : baseNoise;
+
       b6 = white * 0.115926;
     }
 
@@ -71,6 +101,7 @@ export function startAmbientSound(type: 'rain' | 'ocean' | 'forest' | 'birds' | 
 
     // Filter depending on selected sound
     const filter = ctx.createBiquadFilter();
+
     if (type === 'rain') {
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(800, ctx.currentTime);
@@ -98,6 +129,7 @@ export function startAmbientSound(type: 'rain' | 'ocean' | 'forest' | 'birds' | 
     gainNode.connect(ctx.destination);
 
     whiteNoise.start();
+
     currentNoiseNode = whiteNoise;
     currentGainNode = gainNode;
   } catch (e) {
@@ -105,16 +137,22 @@ export function startAmbientSound(type: 'rain' | 'ocean' | 'forest' | 'birds' | 
   }
 }
 
-export async function startAmbientAudio(url: string, volume = 0.25): Promise<void> {
+export async function startAmbientAudio(url, volume = 0.25) {
   stopAmbientSound();
+
   const player = new Audio(url);
   player.loop = true;
   player.volume = Math.max(0, Math.min(1, volume));
+
   currentAudioPlayer = player;
+
   try {
     await player.play();
   } catch (error) {
-    if (currentAudioPlayer === player) currentAudioPlayer = null;
+    if (currentAudioPlayer === player) {
+      currentAudioPlayer = null;
+    }
+
     player.pause();
     throw error;
   }
@@ -125,15 +163,18 @@ export function stopAmbientSound() {
     currentAudioPlayer.pause();
     currentAudioPlayer = null;
   }
+
   if (currentNoiseNode) {
     try {
-      (currentNoiseNode as AudioBufferSourceNode).stop();
+      currentNoiseNode.stop();
       currentNoiseNode.disconnect();
     } catch {
       // ignore
     }
+
     currentNoiseNode = null;
   }
+
   if (currentGainNode) {
     currentGainNode.disconnect();
     currentGainNode = null;

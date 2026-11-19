@@ -1,17 +1,13 @@
-
 import express from 'express';
 import dns from 'node:dns';
-import apiRoutes from './routes/index';
+import apiRoutes from './routes/index.js';
 
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 const app = express();
 
 const allowedOrigins = new Set(
-  (
-    process.env.CORS_ORIGINS ||
-    'https://mindcare-frontend-ochre.vercel.app,http://localhost:5173,http://127.0.0.1:5173'
-  )
+  'https://mindcare-frontend-ochre.vercel.app,http://localhost:5173,http://127.0.0.1:5173'
     .split(',')
     .map(origin => origin.trim().replace(/\/+$/, ''))
     .filter(Boolean)
@@ -24,10 +20,12 @@ app.use((req, res, next) => {
   if (origin && allowedOrigins.has(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
+
     res.setHeader(
       'Access-Control-Allow-Methods',
       'GET, POST, PUT, PATCH, DELETE, OPTIONS'
     );
+
     res.setHeader(
       'Access-Control-Allow-Headers',
       'Content-Type, Authorization, x-admin-token'
@@ -57,7 +55,7 @@ app.use('/api', apiRoutes);
 
 app.use('/api', (req, res) => {
   res.status(404).json({
-    error: `API endpoint not found: ${req.method} ${req.path}`
+    error: `API endpoint not found: ${req.method} ${req.path}`,
   });
 });
 

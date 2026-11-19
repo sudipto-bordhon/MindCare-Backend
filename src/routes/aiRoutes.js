@@ -1,5 +1,6 @@
+
 import { Router } from 'express';
-import * as controller from '../controllers/aiController';
+import * as controller from '../controllers/aiController.js';
 
 const router = Router();
 

@@ -2,13 +2,8 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "types": ["node"],
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "allowImportingTsExtensions": true,
-    "noEmit": true
+    "moduleResolution": "Node",
+    "checkJs": false
   },
-  "include": ["src/**/*.ts", "crisisHelplines.ts"]
+  "include": ["src/**/*.js"]
 }

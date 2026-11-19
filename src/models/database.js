@@ -1,7 +1,7 @@
 
 import mongoose from 'mongoose';
-import { INITIAL_CRISIS_HELPLINES, type CrisisHelpline } from '../../crisisHelplines';
-import { ADMIN_EMAIL, ADMIN_NAME, ADMIN_PASSWORD } from '../config';
+import { INITIAL_CRISIS_HELPLINES } from '../../crisisHelplines.js';
+import { ADMIN_EMAIL, ADMIN_NAME, ADMIN_PASSWORD } from '../config.js';
 
 // =====================================================
 // MongoDB Configuration
@@ -12,33 +12,16 @@ const MONGODB_URI = process.env.MONGODB_URI || '';
 export let isMongoConnected = false;
 
 // Reuse existing models safely and preserve their collection names.
-function getModel<T>(
-  name: string,
-  schema: mongoose.Schema<T>
-): mongoose.Model<T> {
-  const existing = mongoose.models[name] as mongoose.Model<T> | undefined;
-  return existing || mongoose.model<T>(name, schema);
+function getModel(name, schema) {
+  const existing = mongoose.models[name];
+  return existing || mongoose.model(name, schema);
 }
 
 // =====================================================
 // User Model
 // =====================================================
 
-export interface AppUser {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  phone?: string;
-  ageBand: string;
-  preferredLanguage: string;
-  theme: string;
-  role: string;
-  streakDays: number;
-  createdAt: string;
-}
-
-const userSchema = new mongoose.Schema<AppUser>({
+const userSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -55,30 +38,13 @@ const userSchema = new mongoose.Schema<AppUser>({
   }
 });
 
-export const UserModel = getModel<AppUser>('User', userSchema);
+export const UserModel = getModel('User', userSchema);
 
 // =====================================================
 // Ambient Soundscape Model
 // =====================================================
 
-export interface AmbientSoundscapeRecord {
-  id: string;
-  titleEn: string;
-  titleBn: string;
-  audioFileName?: string;
-  contentType?: string;
-  audioData?: Buffer;
-  audioCloudinaryId?: string;
-  audioUrl?: string;
-  pendingCloudinaryDeletions?: {
-    publicId: string;
-    resourceType: 'image' | 'video' | 'raw';
-  }[];
-  soundType?: 'rain' | 'ocean' | 'forest' | 'birds' | 'whitenoise';
-  createdAt: Date;
-}
-
-const soundscapeSchema = new mongoose.Schema<AmbientSoundscapeRecord>({
+const soundscapeSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   titleEn: { type: String, required: true },
   titleBn: { type: String, required: true },
@@ -105,15 +71,12 @@ const soundscapeSchema = new mongoose.Schema<AmbientSoundscapeRecord>({
   createdAt: { type: Date, default: Date.now }
 });
 
-export const SoundscapeModel = getModel<AmbientSoundscapeRecord>(
+export const SoundscapeModel = getModel(
   'AmbientSoundscape',
   soundscapeSchema
 );
 
-export const BUILT_IN_SOUND_TYPES: Record<
-  string,
-  NonNullable<AmbientSoundscapeRecord['soundType']>
-> = {
+export const BUILT_IN_SOUND_TYPES = {
   rain: 'rain',
   ocean: 'ocean',
   forest: 'forest',
@@ -125,35 +88,7 @@ export const BUILT_IN_SOUND_TYPES: Record<
 // About Team Member Model
 // =====================================================
 
-export interface AboutTeamMemberRecord {
-  id: string;
-  name: string;
-  phone: string;
-  position: string;
-  university: string;
-  socialLinks?: {
-    facebook: string;
-    linkedin: string;
-    instagram: string;
-    twitter: string;
-  };
-  imageContentType?: string;
-  imageData?: Buffer;
-  imageCloudinaryId?: string;
-  imageUrl?: string;
-  cvFileName?: string;
-  cvContentType?: string;
-  cvData?: Buffer;
-  cvCloudinaryId?: string;
-  cvUrl?: string;
-  pendingCloudinaryDeletions?: {
-    publicId: string;
-    resourceType: 'image' | 'video' | 'raw';
-  }[];
-  updatedAt: Date;
-}
-
-const aboutTeamMemberSchema = new mongoose.Schema<AboutTeamMemberRecord>({
+const aboutTeamMemberSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   name: { type: String, default: '' },
   phone: { type: String, default: '' },
@@ -188,7 +123,7 @@ const aboutTeamMemberSchema = new mongoose.Schema<AboutTeamMemberRecord>({
   updatedAt: { type: Date, default: Date.now }
 });
 
-export const AboutTeamMemberModel = getModel<AboutTeamMemberRecord>(
+export const AboutTeamMemberModel = getModel(
   'AboutTeamMember',
   aboutTeamMemberSchema
 );
@@ -197,23 +132,18 @@ export const AboutTeamMemberModel = getModel<AboutTeamMemberRecord>(
 // About Team Configuration
 // =====================================================
 
-export interface AboutTeamConfigRecord {
-  id: string;
-  memberIds: string[];
-}
-
 export const DEFAULT_ABOUT_TEAM_MEMBER_IDS = [
   'member-1',
   'member-2',
   'member-3'
 ];
 
-const aboutTeamConfigSchema = new mongoose.Schema<AboutTeamConfigRecord>({
+const aboutTeamConfigSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   memberIds: { type: [String], default: [] }
 });
 
-export const AboutTeamConfigModel = getModel<AboutTeamConfigRecord>(
+export const AboutTeamConfigModel = getModel(
   'AboutTeamConfig',
   aboutTeamConfigSchema
 );
@@ -222,12 +152,7 @@ export const AboutTeamConfigModel = getModel<AboutTeamConfigRecord>(
 // Crisis Helpline Configuration
 // =====================================================
 
-export interface CrisisHelplineConfigRecord {
-  id: string;
-  helplines: CrisisHelpline[];
-}
-
-const crisisHelplineSchema = new mongoose.Schema<CrisisHelpline>(
+const crisisHelplineSchema = new mongoose.Schema(
   {
     id: { type: String, required: true },
     nameEn: { type: String, default: '' },
@@ -240,13 +165,13 @@ const crisisHelplineSchema = new mongoose.Schema<CrisisHelpline>(
 );
 
 const crisisHelplineConfigSchema =
-  new mongoose.Schema<CrisisHelplineConfigRecord>({
+  new mongoose.Schema({
     id: { type: String, required: true, unique: true },
     helplines: { type: [crisisHelplineSchema], default: [] }
   });
 
 export const CrisisHelplineConfigModel =
-  getModel<CrisisHelplineConfigRecord>(
+  getModel(
     'CrisisHelplineConfig',
     crisisHelplineConfigSchema
   );
@@ -255,30 +180,12 @@ export const CrisisHelplineConfigModel =
 // Donation Settings
 // =====================================================
 
-export interface DonationSettingsChangeRecord {
-  adminId: string;
-  adminName: string;
-  adminEmail: string;
-  previousBkashNumber: string;
-  bkashNumber: string;
-  previousEnabled: boolean;
-  enabled: boolean;
-  changedAt: Date;
-}
-
-export interface DonationSettingsRecord {
-  id: string;
-  bkashNumber: string;
-  enabled: boolean;
-  changeHistory: DonationSettingsChangeRecord[];
-}
-
 export const DEFAULT_DONATION_SETTINGS = {
   bkashNumber: '01795398332',
   enabled: true
 };
 
-const donationSettingsSchema = new mongoose.Schema<DonationSettingsRecord>({
+const donationSettingsSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   bkashNumber: {
     type: String,
@@ -304,45 +211,14 @@ const donationSettingsSchema = new mongoose.Schema<DonationSettingsRecord>({
   }
 });
 
-export const DonationSettingsModel = getModel<DonationSettingsRecord>(
+export const DonationSettingsModel = getModel(
   'DonationSettings',
   donationSettingsSchema
 );
 
-// =====================================================
 // AI Provider Key Configuration
-// =====================================================
 
-export interface EncryptedAIKeyRecord {
-  id: string;
-  encryptedKey: string;
-  iv: string;
-  authTag: string;
-  lastFour: string;
-}
-
-export interface CustomAIProviderRecord {
-  id: string;
-  name: string;
-  keys: EncryptedAIKeyRecord[];
-  integration?: 'openrouter';
-  model?: string;
-  enabledForAI?: boolean;
-  preferredKeyId?: string;
-}
-
-export interface AIProviderKeyConfigRecord {
-  id: string;
-  geminiKeys: EncryptedAIKeyRecord[];
-  openaiKeys: EncryptedAIKeyRecord[];
-  useGeminiEnvironmentKeys: boolean;
-  useOpenAIEnvironmentKeys: boolean;
-  preferredGeminiKeyId?: string;
-  preferredOpenAIKeyId?: string;
-  customProviders: CustomAIProviderRecord[];
-}
-
-const encryptedAIKeySchema = new mongoose.Schema<EncryptedAIKeyRecord>(
+const encryptedAIKeySchema = new mongoose.Schema(
   {
     id: { type: String, required: true },
     encryptedKey: { type: String, required: true },
@@ -353,7 +229,7 @@ const encryptedAIKeySchema = new mongoose.Schema<EncryptedAIKeyRecord>(
   { _id: false }
 );
 
-const customAIProviderSchema = new mongoose.Schema<CustomAIProviderRecord>(
+const customAIProviderSchema = new mongoose.Schema(
   {
     id: { type: String, required: true },
     name: { type: String, required: true },
@@ -367,7 +243,7 @@ const customAIProviderSchema = new mongoose.Schema<CustomAIProviderRecord>(
 );
 
 const aiProviderKeyConfigSchema =
-  new mongoose.Schema<AIProviderKeyConfigRecord>({
+  new mongoose.Schema({
     id: { type: String, required: true, unique: true },
     geminiKeys: { type: [encryptedAIKeySchema], default: [] },
     openaiKeys: { type: [encryptedAIKeySchema], default: [] },
@@ -379,7 +255,7 @@ const aiProviderKeyConfigSchema =
   });
 
 export const AIProviderKeyConfigModel =
-  getModel<AIProviderKeyConfigRecord>(
+  getModel(
     'AIProviderKeyConfig',
     aiProviderKeyConfigSchema
   );
@@ -388,7 +264,7 @@ export const AIProviderKeyConfigModel =
 // About Team Helper
 // =====================================================
 
-export async function getAboutTeamMemberIds(): Promise<string[]> {
+export async function getAboutTeamMemberIds() {
   const config = await AboutTeamConfigModel.findOneAndUpdate(
     { id: 'about-team' },
     { $setOnInsert: { memberIds: DEFAULT_ABOUT_TEAM_MEMBER_IDS } },
@@ -406,7 +282,7 @@ export async function getAboutTeamMemberIds(): Promise<string[]> {
 // Crisis Helpline Helper
 // =====================================================
 
-export async function loadCrisisHelplines(): Promise<CrisisHelpline[]> {
+export async function loadCrisisHelplines() {
   const config = await CrisisHelplineConfigModel.findOneAndUpdate(
     { id: 'crisis-helplines' },
     { $setOnInsert: { helplines: INITIAL_CRISIS_HELPLINES } },
@@ -424,7 +300,7 @@ export async function loadCrisisHelplines(): Promise<CrisisHelpline[]> {
 // Donation Settings Helper
 // =====================================================
 
-export async function loadDonationSettings(): Promise<DonationSettingsRecord> {
+export async function loadDonationSettings() {
   const settings = await DonationSettingsModel.findOneAndUpdate(
     { id: 'donations' },
     { $setOnInsert: DEFAULT_DONATION_SETTINGS },
@@ -449,7 +325,7 @@ export async function loadDonationSettings(): Promise<DonationSettingsRecord> {
 // In-memory Fallback and Seed Accounts
 // =====================================================
 
-export const memoryUsers: AppUser[] = [
+export const memoryUsers = [
   {
     id: 'user_sudipto',
     name: 'Sudipto Bordhon',
@@ -482,7 +358,7 @@ export const memoryUsers: AppUser[] = [
 // Seed Initial Users into MongoDB
 // =====================================================
 
-async function seedDefaultUsers(): Promise<void> {
+async function seedDefaultUsers() {
   if (!isMongoConnected) return;
 
   try {
@@ -546,7 +422,7 @@ if (MONGODB_URI) {
 
       void seedDefaultUsers();
     })
-    .catch((err: Error) => {
+    .catch((err) => {
       isMongoConnected = false;
 
       console.warn(

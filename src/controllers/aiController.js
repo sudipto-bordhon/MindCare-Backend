@@ -1,14 +1,22 @@
-import type { RequestHandler } from 'express';
-import { buildLocalGuidance, checkCrisis, containsProfanity, isWellnessRelated, requestAICompletion, type AIMessage } from '../ai/service';
 
-export const postChat: RequestHandler = async (req, res) => {
+import {
+  buildLocalGuidance,
+  checkCrisis,
+  containsProfanity,
+  isWellnessRelated,
+  requestAICompletion
+} from '../ai/service.js';
+
+export const postChat = async (req, res) => {
   try {
     const { message, history = [], language = 'en', memoryConsent = true } = req.body;
     const requestedAgeBand = req.body?.ageBand;
+
     const ageBand = typeof requestedAgeBand === 'string'
       && ['child_teen', 'young_adult', 'adult', 'senior'].includes(requestedAgeBand)
       ? requestedAgeBand
       : 'adult';
+
     const isMinor = ageBand === 'child_teen';
 
     if (!message || typeof message !== 'string') {
@@ -19,8 +27,24 @@ export const postChat: RequestHandler = async (req, res) => {
 
     if (isCrisis) {
       const crisisReply = language === 'bn'
-        ? `আমি শুনতে পাচ্ছি যে আপনি খুব কঠিন সময়ের মধ্য দিয়ে যাচ্ছেন, এবং আপনার এই কষ্ট অত্যন্ত গুরুত্বপূর্ণ। অনুগ্রহ করে একা থাকবেন না—সাহায্য নেওয়ার জন্য মানুষ প্রস্তুত আছেন।\n\n🚨 **জরুরি সহায়তা ও হটলাইন (বাংলাদেশ):**\n- **জাতীয় মানসিক স্বাস্থ্য হেল্পলাইন:** ১৬১২২ (বিনামূল্যে)\n- **কান পেতে রই (ইমোশনাল সাপোর্ট):** ০১৭৭৯৫৫৪৩৯১\n- **জরুরি জাতীয় সেবা:** ৯৯৯\n- **আন্তর্জাতিক:** Crisis Text Line (HOME লিখে 741741 এ এসএমএস করুন) অথবা 988\n\nঅনুগ্রহ করে এখনই কোনো বিশ্বস্ত পরিবার/বন্ধুর সাথে যোগাযোগ করুন অথবা নিকটস্থ হাসপাতালে যান। আপনার জীবন মূল্যবান.${isMinor ? '\n\nআপনি ১৮ বছরের কম হলে, এখনই একজন নিরাপদ ও বিশ্বস্ত প্রাপ্তবয়স্ক—যেমন অভিভাবক, শিক্ষক বা কাউন্সেলর—কে জানান।' : ''}`
-        : `I hear how much pain and distress you are experiencing right now, and your safety is deeply important. Please do not carry this alone—there are compassionate people ready to support you right now.\n\n🚨 **Immediate Crisis & Emergency Helplines:**\n- **Bangladesh National Mental Health Helpline:** 16122 (Toll-free)\n- **Kaan Pete Roi (Emotional Support Helpline):** +8801779554391\n- **National Emergency Assistance:** 999\n- **International Suicide & Crisis Lifeline:** 988 (USA/Canada) or text HOME to 741741\n\nPlease reach out to a trusted loved one or contact emergency services immediately. You matter, and support is available.${isMinor ? '\n\nIf you are under 18, please tell a safe, trusted adult now, such as a parent or guardian, teacher, or counselor.' : ''}`;
+        ? `আমি শুনতে পাচ্ছি যে আপনি খুব কঠিন সময়ের মধ্য দিয়ে যাচ্ছেন, এবং আপনার এই কষ্ট অত্যন্ত গুরুত্বপূর্ণ। অনুগ্রহ করে একা থাকবেন না—সাহায্য নেওয়ার জন্য মানুষ প্রস্তুত আছেন।
+
+🚨 **জরুরি সহায়তা ও হটলাইন (বাংলাদেশ):**
+- **জাতীয় মানসিক স্বাস্থ্য হেল্পলাইন:** ১৬১২২ (বিনামূল্যে)
+- **কান পেতে রই (ইমোশনাল সাপোর্ট):** ০১৭৭৯৫৫৪৩৯১
+- **জরুরি জাতীয় সেবা:** ৯৯৯
+- **আন্তর্জাতিক:** Crisis Text Line (HOME লিখে 741741 এ এসএমএস করুন) অথবা 988
+
+অনুগ্রহ করে এখনই কোনো বিশ্বস্ত পরিবার/বন্ধুর সাথে যোগাযোগ করুন অথবা নিকটস্থ হাসপাতালে যান। আপনার জীবন মূল্যবান.${isMinor ? '\n\nআপনি ১৮ বছরের কম হলে, এখনই একজন নিরাপদ ও বিশ্বস্ত প্রাপ্তবয়স্ক—যেমন অভিভাবক, শিক্ষক বা কাউন্সেলর—কে জানান।' : ''}`
+        : `I hear how much pain and distress you are experiencing right now, and your safety is deeply important. Please do not carry this alone—there are compassionate people ready to support you right now.
+
+🚨 **Immediate Crisis & Emergency Helplines:**
+- **Bangladesh National Mental Health Helpline:** 16122 (Toll-free)
+- **Kaan Pete Roi (Emotional Support Helpline):** +8801779554391
+- **National Emergency Assistance:** 999
+- **International Suicide & Crisis Lifeline:** 988 (USA/Canada) or text HOME to 741741
+
+Please reach out to a trusted loved one or contact emergency services immediately. You matter, and support is available.${isMinor ? '\n\nIf you are under 18, please tell a safe, trusted adult now, such as a parent or guardian, teacher, or counselor.' : ''}`;
 
       return res.json({
         reply: crisisReply,
@@ -33,6 +57,7 @@ export const postChat: RequestHandler = async (req, res) => {
       const friendlyReply = language === 'bn'
         ? 'আরে ভাই, রাগটা দেখি একদম ফুল ভলিউমে 😅 গালি ফিরিয়ে না দিয়ে সমস্যাটাকেই ধরি—কী হয়েছে বলো?'
         : 'Whoa, that sounds like a full-volume frustration moment 😅 I’ll skip the insults and focus on what’s going on—want to tell me what happened?';
+
       return res.json({
         reply: friendlyReply,
         isCrisis: false,
@@ -42,13 +67,17 @@ export const postChat: RequestHandler = async (req, res) => {
 
     const hasWellnessConversationContext = Array.isArray(history) && history
       .slice(-6)
-      .some((turn: { role?: string; content?: unknown }) =>
-        turn.role === 'user' && typeof turn.content === 'string' && isWellnessRelated(turn.content));
+      .some((turn) =>
+        turn.role === 'user' &&
+        typeof turn.content === 'string' &&
+        isWellnessRelated(turn.content)
+      );
 
     if (!isWellnessRelated(message) && !hasWellnessConversationContext) {
       const outOfScopeReply = language === 'bn'
         ? 'আমি শুধু মানসিক সুস্থতা, মুড, স্ট্রেস, ঘুম ও self-care বিষয়ে সহায়তা করি। বাংলাদেশ বা অন্যান্য সাধারণ তথ্যের প্রশ্নের উত্তর আমি দিতে পারি না। আপনার মন বা অনুভূতি নিয়ে কিছু শেয়ার করতে চাইলে বলুন—আমি শুনছি।'
         : 'I can only help with mental wellness, mood, stress, sleep, and self-care. I cannot answer general factual questions. If you would like to share how you are feeling, I am here to listen.';
+
       return res.json({
         reply: outOfScopeReply,
         isCrisis: false,
@@ -101,10 +130,11 @@ Core Capabilities & Conversational Guidelines:
 8. SCOPE:
    - Answer mental wellness, emotional well-being, and basic psychoeducation about how stress, mood, anxiety, and sleep can affect well-being. Do not answer unrelated general-knowledge questions or try to act as a general medical diagnostic service.`;
 
-    const formattedMessages: AIMessage[] = [];
+    const formattedMessages = [];
 
     if (memoryConsent && Array.isArray(history) && history.length > 0) {
       const recentHistory = history.slice(-6);
+
       for (const item of recentHistory) {
         if (item.role && item.content) {
           formattedMessages.push({
@@ -132,12 +162,16 @@ Core Capabilities & Conversational Guidelines:
       isCrisis: false,
       source: aiRes.source
     });
-  } catch (error: any) {
+
+  } catch (error) {
     console.error('Error generating chatbot response:', error);
+
     const lang = req.body?.language || 'en';
+
     const errorFallback = lang === 'bn'
       ? 'দুঃখিত, সংযোগে কিছু সমস্যা হয়েছে। তবে মনে রাখবেন, গভীর শ্বাস নেওয়া এবং এক গ্লাস জল পান করা এই মুহূর্তে আপনাকে কিছুটা স্বস্তি দিতে পারে।'
       : 'I encountered a temporary connection issue. Take a gentle breath, hydrate, and know that you are doing your best today.';
+
     res.json({
       reply: errorFallback,
       isCrisis: false,
@@ -146,7 +180,8 @@ Core Capabilities & Conversational Guidelines:
   }
 };
 
-export const postStressAnalysis: RequestHandler = async (req, res) => {
+
+export const postStressAnalysis = async (req, res) => {
   try {
     const {
       checkIns = [],
@@ -155,6 +190,7 @@ export const postStressAnalysis: RequestHandler = async (req, res) => {
       language = 'en',
       journalConsented = false,
     } = req.body;
+
     if (!Array.isArray(checkIns)) {
       return res.status(400).json({ error: 'checkIns must be an array' });
     }
@@ -163,7 +199,7 @@ export const postStressAnalysis: RequestHandler = async (req, res) => {
       ? [...screenings].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 10)
       : [];
 
-    // Zero-data state: if user has no real check-in or screening data, do NOT generate fake mock data
+    // Zero-data state: if user has no real check-in or screening data, DO NOT generate fake mock data
     if (checkIns.length === 0 && recentScreenings.length === 0) {
       return res.json({
         patterns: [],
@@ -180,9 +216,11 @@ export const postStressAnalysis: RequestHandler = async (req, res) => {
     const recentCheckIns = [...checkIns]
       .sort((a, b) => String(b.updatedAt || b.createdAt || b.date).localeCompare(String(a.updatedAt || a.createdAt || a.date)))
       .slice(0, 10);
+
     const consentedJournalEntries = journalConsented && Array.isArray(journalEntries)
       ? journalEntries.slice(0, 10)
       : [];
+
     const prompt = `Analyze these real self-reported mental wellness check-in records for a user.
 Check-in records: ${JSON.stringify(recentCheckIns)}
 Screening results: ${JSON.stringify(recentScreenings)}
@@ -204,9 +242,11 @@ Strict rule: DO NOT diagnose, use medical pathology words, or claim certainty. R
     });
 
     const parsed = JSON.parse(aiRes.text || '{}');
+
     const parsedRecommendations = Array.isArray(parsed.recommendations)
-      ? parsed.recommendations.filter((item: unknown): item is string => typeof item === 'string')
+      ? parsed.recommendations.filter(item => typeof item === 'string')
       : [];
+
     res.json({
       patterns: parsed.patterns || [
         language === 'bn' ? 'পর্যাপ্ত বিশ্রাম মেজাজের স্থায়িত্ব রক্ষায় সহায়ক হতে পারে।' : 'Adequate rest appears associated with steadier energy levels.'
@@ -220,12 +260,15 @@ Strict rule: DO NOT diagnose, use medical pathology words, or claim certainty. R
         ? 'এই বিশ্লেষণ কোনো ডাক্তারি ডায়াগনোসিস নয়।'
         : 'This pattern recognition is non-diagnostic and observational only.'
     });
+
   } catch (error) {
     console.error('Error in stress analysis:', error);
+
     const latest = Array.isArray(req.body?.checkIns)
       ? [...req.body.checkIns]
         .sort((a, b) => String(b.updatedAt || b.createdAt || b.date).localeCompare(String(a.updatedAt || a.createdAt || a.date)))[0]
       : null;
+
     const localPatterns = latest
       ? req.body?.language === 'bn'
         ? [
@@ -239,6 +282,7 @@ Strict rule: DO NOT diagnose, use medical pathology words, or claim certainty. R
           `Your recorded energy was ${latest.energyLevel}/10 and focus was ${latest.focusLevel}/10.`
         ]
       : [];
+
     res.json({
       patterns: localPatterns,
       summary: req.body?.language === 'bn'
@@ -261,37 +305,45 @@ Strict rule: DO NOT diagnose, use medical pathology words, or claim certainty. R
   }
 };
 
-export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
+
+export const postWeeklyIntegratedReport = async (req, res) => {
   const { checkIns, screenings, asOfDate, language = 'en' } = req.body || {};
+
   const isBn = language === 'bn';
 
   if (!Array.isArray(checkIns) || !Array.isArray(screenings)) {
     return res.status(400).json({ error: 'checkIns and screenings must be arrays' });
   }
+
   if (typeof asOfDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(asOfDate)) {
     return res.status(400).json({ error: 'asOfDate must use YYYY-MM-DD format' });
   }
 
   const endDate = new Date(`${asOfDate}T00:00:00.000Z`);
+
   if (Number.isNaN(endDate.getTime()) || endDate.toISOString().slice(0, 10) !== asOfDate) {
     return res.status(400).json({ error: 'asOfDate is not a valid date' });
   }
+
   const startDate = new Date(endDate);
   startDate.setUTCDate(startDate.getUTCDate() - 6);
+
   const weekStart = startDate.toISOString().slice(0, 10);
+
   const latestScreeningDate = new Date(endDate);
   latestScreeningDate.setUTCDate(latestScreeningDate.getUTCDate() - 29);
+
   const screeningStart = latestScreeningDate.toISOString().slice(0, 10);
 
   const weekCheckIns = checkIns
-    .filter((entry: any) =>
+    .filter((entry) =>
       typeof entry?.date === 'string' &&
       entry.date >= weekStart &&
       entry.date <= asOfDate &&
       ['mood', 'stressLevel', 'sleepHours', 'energyLevel'].every(key => Number.isFinite(entry[key]))
     )
-    .sort((a: any, b: any) => a.date.localeCompare(b.date))
-    .map((entry: any) => ({
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((entry) => ({
       date: entry.date,
       mood: entry.mood,
       stressLevel: entry.stressLevel,
@@ -299,9 +351,10 @@ export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
       energyLevel: entry.energyLevel,
     }));
 
-  const screeningByInstrument = new Map<string, any>();
+  const screeningByInstrument = new Map();
+
   screenings
-    .filter((entry: any) =>
+    .filter((entry) =>
       typeof entry?.date === 'string' &&
       entry.date >= screeningStart &&
       entry.date <= asOfDate &&
@@ -310,8 +363,8 @@ export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
       Number.isFinite(entry.maxScore) &&
       entry.maxScore > 0
     )
-    .sort((a: any, b: any) => b.date.localeCompare(a.date))
-    .forEach((entry: any) => {
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .forEach((entry) => {
       if (!screeningByInstrument.has(entry.instrumentId)) {
         screeningByInstrument.set(entry.instrumentId, {
           instrumentId: entry.instrumentId,
@@ -326,23 +379,28 @@ export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
         });
       }
     });
+
   const recentScreenings = Array.from(screeningByInstrument.values());
 
-  const average = (key: 'mood' | 'stressLevel' | 'sleepHours' | 'energyLevel') =>
+  const average = (key) =>
     weekCheckIns.length
       ? Number((weekCheckIns.reduce((sum, entry) => sum + entry[key], 0) / weekCheckIns.length).toFixed(1))
       : null;
+
   const averages = {
     mood: average('mood'),
     stressLevel: average('stressLevel'),
     sleepHours: average('sleepHours'),
     energyLevel: average('energyLevel'),
   };
-  const insights: string[] = [];
-  const recommendations: string[] = [];
-  const elevatedScreenings = recentScreenings.filter((entry: any) =>
+
+  const insights = [];
+  const recommendations = [];
+
+  const elevatedScreenings = recentScreenings.filter((entry) =>
     /moderate|severe|high|elevated|মাঝারি|তীব্র|উচ্চ/i.test(String(entry.band || ''))
   );
+
   const highStressWeek = averages.stressLevel !== null && averages.stressLevel >= 7;
   const shortSleepWeek = averages.sleepHours !== null && averages.sleepHours < 7;
 
@@ -355,7 +413,9 @@ export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
       ...(highStressWeek ? [isBn ? 'গড় স্ব-প্রতিবেদিত চাপ বেশি' : 'higher average self-reported stress'] : []),
       ...(shortSleepWeek ? [isBn ? 'গড় ঘুম ৭ ঘণ্টার কম' : 'average sleep below 7 hours'] : []),
     ];
-    const bands = elevatedScreenings.map((entry: any) => `${entry.instrumentTitle}: ${entry.band}`);
+
+    const bands = elevatedScreenings.map((entry) => `${entry.instrumentTitle}: ${entry.band}`);
+
     insights.push(isBn
       ? `এই সপ্তাহে ${factors.join(' ও ')} এবং সাম্প্রতিক ${bands.length ? bands.join(', ') : 'স্ক্রিনিং ফল'} একই রিপোর্টে দেখা যাচ্ছে। এটি শুধু পাশাপাশি দেখা তথ্য—পরিসংখ্যানগত correlation বা রোগ নির্ণয় নয়।`
       : `This week shows ${factors.join(' and ')} alongside recent ${bands.length ? bands.join(', ') : 'screening results'}. These are co-occurring observations, not a statistical correlation or diagnosis.`);
@@ -369,16 +429,18 @@ export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
       : 'This week’s check-ins and recent screening results are shown together; one week of data cannot establish cause or statistical correlation.');
   }
 
-  if (recentScreenings.some((entry: any) => entry.flaggedSafetyQuestion)) {
+  if (recentScreenings.some((entry) => entry.flaggedSafetyQuestion)) {
     recommendations.push(isBn
       ? 'একটি টেস্টে নিরাপত্তা-সংক্রান্ত উত্তরের ইঙ্গিত আছে। এখনই বিশ্বাসযোগ্য কারও সঙ্গে কথা বলুন; নিজেকে নিরাপদ রাখা কঠিন হলে স্থানীয় জরুরি সহায়তা নিন।'
       : 'A test response raised a safety concern. Reach out to someone you trust now; if you may not be able to stay safe, contact local emergency support.');
   }
+
   if (elevatedScreenings.length > 0 && !recommendations.some(text => text.includes('নিরাপত্তা') || text.includes('safety'))) {
     recommendations.push(isBn
       ? 'টেস্টের ফল মাঝারি বা বেশি পরিসরে এসেছে। ফল ও পরবর্তী পদক্ষেপ নিয়ে একজন মানসিক স্বাস্থ্য পেশাজীবীর সঙ্গে কথা বলার কথা বিবেচনা করুন।'
       : 'A screening result is in a moderate or higher band. Consider discussing the result and next steps with a mental health professional.');
   }
+
   if (highStressWeek) {
     recommendations.push(isBn
       ? 'চাপ বেশি থাকলে আজ ৩–৫ মিনিট ধীরে শ্বাস নেওয়া বা grounding অনুশীলন করুন এবং বিশ্বাসযোগ্য কারও সঙ্গে কথা বলুন।'
@@ -389,13 +451,7 @@ export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
       : 'Average sleep was below 7 hours. If possible, keep a regular sleep schedule and a calming bedtime routine.');
   }
 
-  let aiAnalysis: {
-    summary: string;
-    observations: string[];
-    recommendations: string[];
-    source: string;
-    generatedByAi: boolean;
-  } | null = null;
+  let aiAnalysis = null;
 
   if (recentScreenings.length > 0) {
     const reportContext = {
@@ -406,10 +462,11 @@ export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
       observations: insights,
       recommendations: recommendations.slice(0, 3),
     };
+
     const fallbackAnalysis = {
       summary: isBn
-        ? `আপনার ${recentScreenings.map((entry: any) => `${entry.instrumentTitle} ${entry.totalScore}/${entry.maxScore} (${entry.band})`).join(', ')} ফল এবং গত ৭ দিনের ${weekCheckIns.length}টি check-in একসঙ্গে বিবেচনা করা হয়েছে।`
-        : `Your ${recentScreenings.map((entry: any) => `${entry.instrumentTitle} score of ${entry.totalScore}/${entry.maxScore} (${entry.band})`).join(', ')} result${recentScreenings.length > 1 ? 's were' : ' was'} reviewed alongside ${weekCheckIns.length} check-in${weekCheckIns.length === 1 ? '' : 's'} from the last 7 days.`,
+        ? `আপনার ${recentScreenings.map((entry) => `${entry.instrumentTitle} ${entry.totalScore}/${entry.maxScore} (${entry.band})`).join(', ')} ফল এবং গত ৭ দিনের ${weekCheckIns.length}টি check-in একসঙ্গে বিবেচনা করা হয়েছে।`
+        : `Your ${recentScreenings.map((entry) => `${entry.instrumentTitle} score of ${entry.totalScore}/${entry.maxScore} (${entry.band})`).join(', ')} result${recentScreenings.length > 1 ? 's were' : ' was'} reviewed alongside ${weekCheckIns.length} check-in${weekCheckIns.length === 1 ? '' : 's'} from the last 7 days.`,
       observations: insights,
       recommendations: recommendations.slice(0, 3),
     };
@@ -425,7 +482,9 @@ export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
         responseFormat: 'json',
         language,
       });
+
       const parsed = JSON.parse(aiResult.text || '{}');
+
       if (
         aiResult.source !== 'mindcare_compassionate_engine' &&
         typeof parsed.summary === 'string' &&
@@ -434,8 +493,8 @@ export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
       ) {
         aiAnalysis = {
           summary: parsed.summary,
-          observations: parsed.observations.filter((item: unknown): item is string => typeof item === 'string').slice(0, 4),
-          recommendations: parsed.recommendations.filter((item: unknown): item is string => typeof item === 'string').slice(0, 3),
+          observations: parsed.observations.filter(item => typeof item === 'string').slice(0, 4),
+          recommendations: parsed.recommendations.filter(item => typeof item === 'string').slice(0, 3),
           source: aiResult.source,
           generatedByAi: true,
         };
@@ -446,8 +505,10 @@ export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
           generatedByAi: false,
         };
       }
+
     } catch (error) {
       console.error('Error generating weekly screening analysis:', error);
+
       aiAnalysis = {
         ...fallbackAnalysis,
         source: 'local-report-analysis',
@@ -471,12 +532,22 @@ export const postWeeklyIntegratedReport: RequestHandler = async (req, res) => {
   });
 };
 
-export const postJournalReflection: RequestHandler = async (req, res) => {
+
+export const postJournalReflection = async (req, res) => {
   try {
-    const { content, mood, language = 'en', userConsented = false, title = '', category = '' } = req.body;
+    const {
+      content,
+      mood,
+      language = 'en',
+      userConsented = false,
+      title = '',
+      category = ''
+    } = req.body;
 
     if (!userConsented) {
-      return res.status(403).json({ error: 'Chatbot journal analysis consent has not been granted by user.' });
+      return res.status(403).json({
+        error: 'Chatbot journal analysis consent has not been granted by user.'
+      });
     }
 
     if (!content) {
@@ -511,9 +582,12 @@ Write a thoughtful reflection based only on this journal entry.`;
       reflection: aiRes.text.trim(),
       source: aiRes.source
     });
+
   } catch (error) {
     console.error('Error in journal reflection:', error);
-    const lang = (req.body?.language as string) || 'en';
+
+    const lang = req.body?.language || 'en';
+
     res.json({
       reflection: lang === 'bn'
         ? 'আপনার অনুভূতিগুলো ডায়েরিতে লিখে রাখা আত্মউপলব্ধির এক বড় ধাপ। নিজেকে সাধুবাদ দিন।'

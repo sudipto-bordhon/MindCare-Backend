@@ -1,9 +1,16 @@
-import crypto from 'node:crypto';
-import type { RequestHandler } from 'express';
-import { ADMIN_EMAIL, ADMIN_NAME, ADMIN_SESSION_SECRET } from '../config';
-import { UserModel, isMongoConnected, memoryUsers, type AppUser } from '../models/database';
 
-export const getAuthDemoUsers: RequestHandler = (_req, res) => {
+import crypto from 'node:crypto';
+
+import { ADMIN_EMAIL, ADMIN_NAME, ADMIN_SESSION_SECRET } from '../config.js';
+
+import {
+  UserModel,
+  isMongoConnected,
+  memoryUsers
+} from '../models/database.js';
+
+
+export const getAuthDemoUsers = (_req, res) => {
   res.json({
     demoAccounts: [
       {
@@ -25,30 +32,51 @@ export const getAuthDemoUsers: RequestHandler = (_req, res) => {
   });
 };
 
-export const postAuthRegister: RequestHandler = async (req, res) => {
+
+export const postAuthRegister = async (req, res) => {
   try {
-    const { name, email, password, ageBand = 'adult', preferredLanguage = 'bn', phone } = req.body;
+    const {
+      name,
+      email,
+      password,
+      ageBand = 'adult',
+      preferredLanguage = 'bn',
+      phone
+    } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required.' });
+      return res.status(400).json({
+        error: 'Name, email, and password are required.'
+      });
     }
 
     const cleanEmail = email.trim().toLowerCase();
 
     // Check if user exists
     if (isMongoConnected) {
-      const existing = await UserModel.findOne({ email: cleanEmail });
+      const existing = await UserModel.findOne({
+        email: cleanEmail
+      });
+
       if (existing) {
-        return res.status(409).json({ error: 'An account with this email already exists. Please sign in.' });
+        return res.status(409).json({
+          error: 'An account with this email already exists. Please sign in.'
+        });
       }
+
     } else {
-      const existingMem = memoryUsers.find(u => u.email.toLowerCase() === cleanEmail);
+      const existingMem = memoryUsers.find(
+        u => u.email.toLowerCase() === cleanEmail
+      );
+
       if (existingMem) {
-        return res.status(409).json({ error: 'An account with this email already exists. Please sign in.' });
+        return res.status(409).json({
+          error: 'An account with this email already exists. Please sign in.'
+        });
       }
     }
 
-    const newUserObj: AppUser = {
+    const newUserObj = {
       id: 'usr_' + Date.now(),
       name: name.trim(),
       email: cleanEmail,
@@ -65,6 +93,7 @@ export const postAuthRegister: RequestHandler = async (req, res) => {
     if (isMongoConnected) {
       await UserModel.create(newUserObj);
     }
+
     // Always sync in-memory for zero latency
     memoryUsers.push(newUserObj);
 
@@ -77,27 +106,37 @@ export const postAuthRegister: RequestHandler = async (req, res) => {
       user: safeUser,
       database: isMongoConnected ? 'MongoDB' : 'Memory'
     });
-  } catch (error: any) {
+
+  } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Server error creating account. Please try again.' });
+
+    res.status(500).json({
+      error: 'Server error creating account. Please try again.'
+    });
   }
 };
 
-export const postAuthLogin: RequestHandler = async (req, res) => {
+
+export const postAuthLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
+      return res.status(400).json({
+        error: 'Email and password are required.'
+      });
     }
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    let matchedUser: AppUser | null = null;
+    let matchedUser = null;
 
     if (isMongoConnected) {
-      const dbUser = await UserModel.findOne({ email: cleanEmail });
+      const dbUser = await UserModel.findOne({
+        email: cleanEmail
+      });
+
       if (dbUser && dbUser.password === cleanPassword) {
         matchedUser = {
           id: dbUser.id,
@@ -117,24 +156,42 @@ export const postAuthLogin: RequestHandler = async (req, res) => {
 
     // Fallback to memoryUsers if not found or MongoDB offline
     if (!matchedUser) {
-      const memUser = memoryUsers.find(u => u.email.toLowerCase() === cleanEmail && u.password === cleanPassword);
+      const memUser = memoryUsers.find(
+        u =>
+          u.email.toLowerCase() === cleanEmail &&
+          u.password === cleanPassword
+      );
+
       if (memUser) {
         matchedUser = memUser;
       }
     }
 
     if (!matchedUser) {
-      return res.status(401).json({ error: 'Invalid email or password. Please try again or use the demo login credentials.' });
+      return res.status(401).json({
+        error: 'Invalid email or password. Please try again or use the demo login credentials.'
+      });
     }
 
-    const { password: _, ...safeUser } = matchedUser as AppUser & { adminToken?: string };
-    if (matchedUser.role === 'admin' || matchedUser.role === 'super_admin') {
-      const payload = Buffer.from(JSON.stringify({
-        userId: matchedUser.id,
-        role: matchedUser.role,
-        expiresAt: Date.now() + (8 * 60 * 60 * 1000),
-      })).toString('base64url');
-      const signature = crypto.createHmac('sha256', ADMIN_SESSION_SECRET).update(payload).digest('base64url');
+    const { password: _, ...safeUser } = matchedUser;
+
+    if (
+      matchedUser.role === 'admin' ||
+      matchedUser.role === 'super_admin'
+    ) {
+      const payload = Buffer.from(
+        JSON.stringify({
+          userId: matchedUser.id,
+          role: matchedUser.role,
+          expiresAt: Date.now() + (8 * 60 * 60 * 1000),
+        })
+      ).toString('base64url');
+
+      const signature = crypto
+        .createHmac('sha256', ADMIN_SESSION_SECRET)
+        .update(payload)
+        .digest('base64url');
+
       safeUser.adminToken = `${payload}.${signature}`;
     }
 
@@ -143,8 +200,12 @@ export const postAuthLogin: RequestHandler = async (req, res) => {
       message: 'Login successful!',
       user: safeUser
     });
-  } catch (error: any) {
+
+  } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Server error during sign in.' });
+
+    res.status(500).json({
+      error: 'Server error during sign in.'
+    });
   }
 };
