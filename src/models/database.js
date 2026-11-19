@@ -10,7 +10,63 @@ import { ADMIN_EMAIL, ADMIN_NAME, ADMIN_PASSWORD } from '../config.js';
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
 export let isMongoConnected = false;
+// =====================================================
+// MongoDB Connection - Vercel Optimized
+// =====================================================
 
+
+export async function connectDB() {
+  if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI is not configured.');
+  }
+
+  // Reuse existing connection
+  if (mongoose.connection.readyState === 1) {
+    isMongoConnected = true;
+    return mongoose.connection;
+  }
+
+  // Reuse pending connection
+  if (globalThis.mongooseConnectionPromise) {
+    await globalThis.mongooseConnectionPromise;
+    isMongoConnected = true;
+    return mongoose.connection;
+  }
+
+  try {
+    globalThis.mongooseConnectionPromise = mongoose.connect(
+      MONGODB_URI,
+      {
+        serverSelectionTimeoutMS: 15000,
+        connectTimeoutMS: 10000,
+        maxPoolSize: 10,
+        minPoolSize: 0,
+        retryWrites: true
+      }
+    );
+
+    await globalThis.mongooseConnectionPromise;
+
+    isMongoConnected = true;
+
+    console.log('MongoDB Atlas connected successfully.');
+
+    await seedDefaultUsers();
+
+    return mongoose.connection;
+
+  } catch (error) {
+    isMongoConnected = false;
+    globalThis.mongooseConnectionPromise = null;
+
+    console.error('MongoDB connection error:', {
+      name: error.name,
+      message: error.message
+    });
+
+    throw error;
+  }
+}
 // Reuse existing models safely and preserve their collection names.
 function getModel(name, schema) {
   const existing = mongoose.models[name];
