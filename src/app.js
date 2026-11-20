@@ -1,20 +1,21 @@
 import express from 'express';
 import dns from 'node:dns';
-import apiRoutes from './routes/index.js';
+import cors from 'cors';
 
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 const app = express();
+app.use(cors());
 
-const allowedOrigins = new Set(
+/* const allowedOrigins = new Set(
   'https://mindcare-frontend-ochre.vercel.app,http://localhost:5173,http://127.0.0.1:5173'
     .split(',')
     .map(origin => origin.trim().replace(/\/+$/, ''))
     .filter(Boolean)
-);
+); */
 
 // CORS middleware
-app.use((req, res, next) => {
+/* app.use((req, res, next) => {
   const origin = req.headers.origin?.replace(/\/+$/, '');
 
   if (origin && allowedOrigins.has(origin)) {
@@ -41,22 +42,17 @@ app.use((req, res, next) => {
   }
 
   next();
-});
+}); */
 
 // JSON middleware
 app.use(express.json({ limit: '18mb' }));
 
-app.get('/', (req, res) => {
-  res.send('MindCare Backend Server is running!');
-});
 
-// API routes
-app.use('/api', apiRoutes);
 
-app.use('/api', (req, res) => {
+/* app.use('/api', (req, res) => {
   res.status(404).json({
     error: `API endpoint not found: ${req.method} ${req.path}`,
   });
-});
+}); */
 
 export default app;

@@ -1,12 +1,16 @@
 import app from './app.js';
 import { PORT } from './config.js';
 import { connectDB } from './models/database.js';
+import apiRoutes from './routes/index.js';
 
 connectDB();
 
 app.get('/', (req, res) => {
   res.send('MindCare Backend Server is running!');
 });
+
+// API routes
+app.use('/api', apiRoutes);
 
  app.listen(PORT, "0.0.0.0", () => {
   console.log(`MindCare Backend running on port ${PORT}`);
