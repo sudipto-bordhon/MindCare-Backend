@@ -31,7 +31,7 @@ export const getDbStatus = (req, res) => {
   res.json({
     connected: isMongoConnected,
     mode: isMongoConnected ? 'MongoDB Atlas' : 'In-Memory Secure Store',
-    uriMasked: 'mongodb+srv://sudiptobordhon_db_user:****@cluster0.e1g0f6w.mongodb.net'
+    uriMasked: 'mongodb+srv://sudiptobordhon_db_user:sudip123@cluster0.e1g0f6w.mongodb.net'
   });
 };
 
