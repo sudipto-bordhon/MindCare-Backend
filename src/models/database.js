@@ -49,7 +49,7 @@ export async function connectDB() {
 
     isMongoConnected = true;
 
-    console.log('MongoDB Atlas connected successfully.');
+    console.log('MongoDB Atlas connected successfully.yess');
 
     await seedDefaultUsers();
 
@@ -466,7 +466,7 @@ async function seedDefaultUsers() {
 // MongoDB Connection
 // =====================================================
 
-if (MONGODB_URI) {
+/* if (MONGODB_URI) {
   mongoose
     .connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 5000
@@ -490,4 +490,4 @@ if (MONGODB_URI) {
   console.warn(
     'MongoDB URI is not configured; running with the in-memory database.'
   );
-}
+} */
