@@ -3,7 +3,7 @@ import { PORT } from './config.js';
 import { connectDB } from './models/database.js';
 import apiRoutes from './routes/index.js';
 
-connectDB();
+/* connectDB(); */
 
 app.get('/', (req, res) => {
   res.send('MindCare Backend Server is running!');
