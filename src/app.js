@@ -8,6 +8,11 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '18mb' }));
 
+// MongoDB connection
+await connectDB().catch(error => {
+  console.error('MongoDB startup connection failed:', error.message);
+});
+
 // Root route
 app.get('/', (req, res) => {
   res.send('MindCare Backend Server is running!');
@@ -24,9 +29,5 @@ app.use((req, res) => {
   });
 });
 
-// MongoDB connection
-connectDB().catch(error => {
-  console.error('MongoDB startup connection failed:', error.message);
-});
 
 export default app;
