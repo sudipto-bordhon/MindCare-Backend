@@ -12,6 +12,6 @@ app.get('/', (req, res) => {
 // API routes
 app.use('/api', apiRoutes);
 
- app.listen(PORT, "0.0.0.0", () => {
+/*  app.listen(PORT, "0.0.0.0", () => {
   console.log(`MindCare Backend running on port ${PORT}`);
-});
+}); */
